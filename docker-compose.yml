@@ -1,0 +1,22 @@
+# Watch Frontend Docker Compose
+# 使用: docker-compose up -d
+# 需要先启动后端: cd ../platform_backend && docker-compose up -d
+
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/watch-frontend:latest
+    container_name: watch-frontend
+    ports:
+      - "8080:80"
+    networks:
+      - watch-network
+    restart: unless-stopped
+
+networks:
+  watch-network:
+    external: true
