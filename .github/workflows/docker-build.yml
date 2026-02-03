@@ -2,7 +2,7 @@ name: Docker Build Frontend
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     tags: ['v*']
 
 env:
