@@ -1,5 +1,5 @@
 # 多阶段构建 - 构建阶段
-FROM node:20-alpine AS builder
+FROM docker.io/library/node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY . .
 RUN yarn build
 
 # 生产阶段 - Nginx
-FROM nginx:alpine
+FROM docker.io/library/nginx:alpine
 
 # 复制构建产物
 COPY --from=builder /app/dist /usr/share/nginx/html

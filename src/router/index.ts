@@ -51,6 +51,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'References' },
   },
   {
+    path: '/crawl',
+    name: 'crawl',
+    component: () => import('@/views/CrawlView.vue'),
+    meta: { title: 'Manual Crawl' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
