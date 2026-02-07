@@ -7,7 +7,15 @@ import {
   getItemDetail,
   submitItems,
   type SubmitItem,
+  type SubmitResponse,
 } from '@/api/crawl'
+
+// Type for recent submission tracking
+export interface RecentSubmission {
+  traceId: string
+  platform: string
+  submittedAt: Date
+}
 
 export const useCrawlStore = defineStore('crawl', () => {
   // State
@@ -21,6 +29,7 @@ export const useCrawlStore = defineStore('crawl', () => {
   const loading = ref(false)
   const detailLoading = ref(false)
   const error = ref<string | null>(null)
+  const recentSubmissions = ref<RecentSubmission[]>([])
 
   // Computed
   const availablePlatforms = computed(() =>
@@ -58,7 +67,18 @@ export const useCrawlStore = defineStore('crawl', () => {
       searchResults.value = result.items
       pagination.value = result.pagination
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to search items'
+      // Check for timeout-related errors
+      const errorMessage = e instanceof Error ? e.message : String(e)
+      if (
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('ECONNABORTED') ||
+        errorMessage.includes('Network Error') ||
+        errorMessage.includes('504')
+      ) {
+        error.value = '请求超时，请稍后重试。部分平台（如 Rakuten）可能需要较长时间响应。'
+      } else {
+        error.value = errorMessage || 'Failed to search items'
+      }
       searchResults.value = []
       pagination.value = null
     } finally {
@@ -102,27 +122,42 @@ export const useCrawlStore = defineStore('crawl', () => {
     }
   }
 
-  async function submitSelected(): Promise<number> {
-    if (selectedItems.value.size === 0) return 0
+  async function submitSelected(): Promise<SubmitResponse> {
+    if (selectedItems.value.size === 0) return { submitted: 0, traceIds: [] }
 
     loading.value = true
     error.value = null
 
     try {
+      const platform = currentPlatform.value
       const items: SubmitItem[] = Array.from(selectedItems.value).map((itemId) => ({
-        platform: currentPlatform.value,
+        platform,
         itemId,
       }))
 
       const result = await submitItems(items)
+
+      // Add to recent submissions
+      const now = new Date()
+      const newSubmissions: RecentSubmission[] = result.traceIds.map((traceId) => ({
+        traceId,
+        platform,
+        submittedAt: now,
+      }))
+      recentSubmissions.value = [...newSubmissions, ...recentSubmissions.value].slice(0, 20) // Keep last 20
+
       clearSelection()
-      return result.submitted
+      return result
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to submit items'
       throw e
     } finally {
       loading.value = false
     }
+  }
+
+  function clearRecentSubmissions() {
+    recentSubmissions.value = []
   }
 
   function toggleSelect(itemId: string) {
@@ -170,6 +205,7 @@ export const useCrawlStore = defineStore('crawl', () => {
     loading,
     detailLoading,
     error,
+    recentSubmissions,
 
     // Computed
     availablePlatforms,
@@ -188,5 +224,6 @@ export const useCrawlStore = defineStore('crawl', () => {
     clearDetail,
     clearResults,
     clearError,
+    clearRecentSubmissions,
   }
 })

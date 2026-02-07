@@ -70,11 +70,8 @@ function goToTrace() {
 
 <template>
   <div class="match-detail-view">
-    <el-page-header @back="$router.push('/matches')">
-      <template #content>
-        <span class="page-title">Match Details</span>
-      </template>
-      <template #extra>
+    <div class="content">
+      <div class="page-toolbar">
         <el-space>
           <el-button @click="goToWatch">
             <el-icon><Goods /></el-icon>
@@ -85,10 +82,7 @@ function goToTrace() {
             View Trace
           </el-button>
         </el-space>
-      </template>
-    </el-page-header>
-
-    <div class="content">
+      </div>
       <el-alert
         v-if="matchesStore.error"
         :title="matchesStore.error"
@@ -220,8 +214,8 @@ function goToTrace() {
     font-weight: 600;
   }
 
-  .content {
-    margin-top: 20px;
+  .page-toolbar {
+    margin-bottom: 16px;
   }
 
   .error-alert {

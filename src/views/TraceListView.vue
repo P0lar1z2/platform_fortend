@@ -17,12 +17,6 @@ function handleSearch() {
 
 <template>
   <div class="trace-list-view">
-    <el-page-header title="Traces" @back="$router.push('/')">
-      <template #content>
-        <span class="page-title">Trace Monitoring</span>
-      </template>
-    </el-page-header>
-
     <div class="content">
       <el-card class="search-card">
         <el-form :inline="true" @submit.prevent="handleSearch">
@@ -77,10 +71,6 @@ function handleSearch() {
 .trace-list-view {
   .page-title {
     font-weight: 600;
-  }
-
-  .content {
-    margin-top: 20px;
   }
 
   .search-card {

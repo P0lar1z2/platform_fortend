@@ -16,12 +16,6 @@ function handleSearch(query: SearchQuery) {
 
 <template>
   <div class="watch-list-view">
-    <el-page-header title="Watches" @back="$router.push('/')">
-      <template #content>
-        <span class="page-title">Watch List</span>
-      </template>
-    </el-page-header>
-
     <div class="content">
       <WatchFilters @search="handleSearch" />
 
@@ -54,10 +48,6 @@ function handleSearch(query: SearchQuery) {
 .watch-list-view {
   .page-title {
     font-weight: 600;
-  }
-
-  .content {
-    margin-top: 20px;
   }
 
   .card-header {

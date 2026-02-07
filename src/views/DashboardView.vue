@@ -1,133 +1,127 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAppStore } from '@/stores'
+import { computed, onMounted } from 'vue'
+import { useDashboardStore } from '@/stores'
+import StatCard from '@/components/dashboard/StatCard.vue'
+import SourcePieChart from '@/components/dashboard/SourcePieChart.vue'
+import BrandBarChart from '@/components/dashboard/BrandBarChart.vue'
 
-const router = useRouter()
-const appStore = useAppStore()
+const dashboardStore = useDashboardStore()
 
-const features = [
-  {
-    title: 'Watches',
-    description: 'Browse and search unified watch data',
-    icon: 'Goods',
-    route: '/watches',
-    color: '#409eff',
-  },
-  {
-    title: 'Match Verification',
-    description: 'Review and verify algorithm matching results',
-    icon: 'Connection',
-    route: '/matches',
-    color: '#67c23a',
-  },
-  {
-    title: 'Traces',
-    description: 'Monitor pipeline processing status',
-    icon: 'List',
-    route: '/traces',
-    color: '#e6a23c',
-  },
-  {
-    title: 'References',
-    description: 'Search and view reference watch models',
-    icon: 'Collection',
-    route: '/references',
-    color: '#909399',
-  },
-]
-
-const statusColor = computed(() => {
-  switch (appStore.backendStatus) {
-    case 'online':
-      return '#67c23a'
-    case 'offline':
-      return '#f56c6c'
-    default:
-      return '#909399'
-  }
+onMounted(() => {
+  dashboardStore.fetchStats()
 })
 
-function navigateTo(route: string) {
-  router.push(route)
-}
+const stats = computed(() => dashboardStore.stats)
+
+const verificationRate = computed(() => {
+  if (!stats.value || stats.value.matches.total === 0) return '0%'
+  const rate = (stats.value.matches.verified / stats.value.matches.total) * 100
+  return `${rate.toFixed(1)}%`
+})
+
+const pipelineActive = computed(() => {
+  if (!stats.value) return 0
+  return stats.value.traces.pending + stats.value.traces.processing
+})
 </script>
 
 <template>
-  <div class="dashboard">
-    <el-row :gutter="20" class="status-row">
-      <el-col :span="24">
-        <el-card class="status-card">
-          <template #header>
-            <div class="card-header">
-              <span>System Status</span>
-              <el-button
-                size="small"
-                :icon="'Refresh'"
-                @click="appStore.checkBackendHealth"
-              >
-                Refresh
-              </el-button>
-            </div>
-          </template>
-          <div class="status-content">
-            <div class="status-item">
-              <span class="status-label">Backend Service</span>
-              <el-tag :color="statusColor" effect="dark">
-                {{ appStore.backendStatus === 'online' ? 'Online' : appStore.backendStatus === 'offline' ? 'Offline' : 'Checking...' }}
-              </el-tag>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div v-loading="dashboardStore.loading" class="dashboard">
+    <el-alert
+      v-if="dashboardStore.error"
+      :title="dashboardStore.error"
+      type="error"
+      show-icon
+      closable
+      style="margin-bottom: 20px"
+    />
 
-    <el-row :gutter="20" class="feature-row">
-      <el-col
-        v-for="feature in features"
-        :key="feature.route"
-        :xs="24"
-        :sm="12"
-        :md="6"
-      >
-        <el-card
-          class="feature-card"
-          :body-style="{ padding: '20px' }"
-          shadow="hover"
-          @click="navigateTo(feature.route)"
-        >
-          <div class="feature-icon" :style="{ backgroundColor: feature.color }">
-            <el-icon size="32"><component :is="feature.icon" /></el-icon>
-          </div>
-          <h3 class="feature-title">{{ feature.title }}</h3>
-          <p class="feature-description">{{ feature.description }}</p>
-        </el-card>
-      </el-col>
-    </el-row>
+    <template v-if="stats">
+      <!-- Row 1: Stat Cards -->
+      <el-row :gutter="20" class="dashboard-row">
+        <el-col :xs="24" :sm="12" :md="6">
+          <StatCard
+            title="Watches"
+            :value="stats.watches_total"
+            icon="Goods"
+            color="#6366F1"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="6">
+          <StatCard
+            title="References"
+            :value="stats.references_total"
+            icon="Collection"
+            color="#22C55E"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="6">
+          <StatCard
+            title="Verification Rate"
+            :value="verificationRate"
+            icon="CircleCheck"
+            color="#F59E0B"
+            :subtitle="`${stats.matches.verified} / ${stats.matches.total}`"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="6">
+          <StatCard
+            title="Pipeline Active"
+            :value="pipelineActive"
+            icon="Loading"
+            color="#64748B"
+            :subtitle="`${stats.traces.pending} pending + ${stats.traces.processing} processing`"
+          />
+        </el-col>
+      </el-row>
 
-    <el-row :gutter="20" class="info-row">
-      <el-col :span="24">
-        <el-card>
-          <template #header>
-            <span>Quick Actions</span>
-          </template>
-          <el-space wrap>
-            <el-button type="primary" @click="navigateTo('/watches')">
-              <el-icon><Search /></el-icon>
-              Search Watches
-            </el-button>
-            <el-button type="success" @click="navigateTo('/matches')">
-              <el-icon><Check /></el-icon>
-              Verify Matches
-            </el-button>
-            <el-button type="warning" @click="navigateTo('/traces')">
-              <el-icon><View /></el-icon>
-              View Traces
-            </el-button>
-          </el-space>
-        </el-card>
-      </el-col>
-    </el-row>
+      <!-- Row 2: Charts -->
+      <el-row :gutter="20" class="dashboard-row">
+        <el-col :xs="24" :md="12">
+          <SourcePieChart :data="stats.source_distribution" />
+        </el-col>
+        <el-col :xs="24" :md="12">
+          <BrandBarChart :data="stats.top_brands" />
+        </el-col>
+      </el-row>
+
+      <!-- Row 3: Pipeline Overview -->
+      <el-row :gutter="20" class="dashboard-row">
+        <el-col :span="24">
+          <el-card>
+            <template #header>
+              <span style="font-weight: 600">Pipeline Overview</span>
+            </template>
+            <el-row :gutter="20">
+              <el-col :xs="12" :md="6">
+                <div class="pipeline-stat">
+                  <div class="pipeline-value" style="color: #F59E0B">{{ stats.traces.pending }}</div>
+                  <div class="pipeline-label">Pending</div>
+                </div>
+              </el-col>
+              <el-col :xs="12" :md="6">
+                <div class="pipeline-stat">
+                  <div class="pipeline-value" style="color: #6366F1">{{ stats.traces.processing }}</div>
+                  <div class="pipeline-label">Processing</div>
+                </div>
+              </el-col>
+              <el-col :xs="12" :md="6">
+                <div class="pipeline-stat">
+                  <div class="pipeline-value" style="color: #22C55E">{{ stats.traces.completed }}</div>
+                  <div class="pipeline-label">Completed</div>
+                </div>
+              </el-col>
+              <el-col :xs="12" :md="6">
+                <div class="pipeline-stat">
+                  <div class="pipeline-value" style="color: #EF4444">{{ stats.traces.failed }}</div>
+                  <div class="pipeline-label">Failed</div>
+                </div>
+              </el-col>
+            </el-row>
+          </el-card>
+        </el-col>
+      </el-row>
+    </template>
   </div>
 </template>
 
@@ -137,73 +131,24 @@ function navigateTo(route: string) {
   margin: 0 auto;
 }
 
-.status-row {
+.dashboard-row {
   margin-bottom: 20px;
 }
 
-.status-card {
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-}
-
-.status-content {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  .status-label {
-    font-weight: 500;
-    color: #606266;
-  }
-}
-
-.feature-row {
-  margin-bottom: 20px;
-}
-
-.feature-card {
-  cursor: pointer;
+.pipeline-stat {
   text-align: center;
-  transition: transform 0.3s;
-
-  &:hover {
-    transform: translateY(-4px);
-  }
+  padding: 16px 0;
 }
 
-.feature-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-  color: #fff;
+.pipeline-value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
-.feature-title {
-  margin: 0 0 8px;
-  font-size: 18px;
-  color: #303133;
-}
-
-.feature-description {
-  margin: 0;
-  font-size: 14px;
-  color: #909399;
-}
-
-.info-row {
-  margin-bottom: 20px;
+.pipeline-label {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: 4px;
 }
 </style>

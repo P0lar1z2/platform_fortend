@@ -41,9 +41,9 @@ const statusText = computed(() => {
       </el-breadcrumb>
     </div>
     <div class="header-right">
-      <el-tag :type="statusType" size="small">
+      <el-tag :type="statusType" size="small" class="status-tag">
         <el-icon class="status-icon"><Connection /></el-icon>
-        {{ statusText }}
+        <span>{{ statusText }}</span>
       </el-tag>
     </div>
   </el-header>
@@ -55,7 +55,8 @@ const statusText = computed(() => {
   align-items: center;
   justify-content: space-between;
   background-color: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--wp-header-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   padding: 0 20px;
   height: 60px;
 }
@@ -72,8 +73,12 @@ const statusText = computed(() => {
   gap: 16px;
 }
 
-.status-icon {
-  margin-right: 4px;
-  vertical-align: middle;
+.status-tag {
+  :deep(.el-tag__content) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
 }
 </style>

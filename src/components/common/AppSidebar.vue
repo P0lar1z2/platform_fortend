@@ -14,6 +14,8 @@ const activeMenu = computed(() => {
   if (path.startsWith('/traces')) return '/traces'
   if (path.startsWith('/references')) return '/references'
   if (path.startsWith('/crawl')) return '/crawl'
+  if (path.startsWith('/database')) return '/database'
+  if (path.startsWith('/admin/scheduler')) return '/admin/scheduler'
   return '/'
 })
 
@@ -58,13 +60,24 @@ function handleMenuSelect(index: string) {
         <el-icon><Download /></el-icon>
         <template #title>Manual Crawl</template>
       </el-menu-item>
+      <el-menu-item index="/database">
+        <el-icon><Coin /></el-icon>
+        <template #title>Database</template>
+      </el-menu-item>
+
+      <el-divider style="margin: 8px 16px; border-color: rgba(255, 255, 255, 0.1);" />
+
+      <el-menu-item index="/admin/scheduler">
+        <el-icon><Timer /></el-icon>
+        <template #title>定时任务</template>
+      </el-menu-item>
     </el-menu>
   </el-aside>
 </template>
 
 <style scoped lang="scss">
 .app-sidebar {
-  background-color: #304156;
+  background-color: var(--wp-sidebar-bg);
   transition: width 0.3s;
   overflow-x: hidden;
 }
@@ -75,10 +88,10 @@ function handleMenuSelect(index: string) {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #fff;
+  color: var(--wp-sidebar-text-active);
   font-size: 18px;
   font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .logo-text {
@@ -87,18 +100,21 @@ function handleMenuSelect(index: string) {
 
 .sidebar-menu {
   border-right: none;
-  background-color: #304156;
+  background-color: var(--wp-sidebar-bg);
 
   :deep(.el-menu-item) {
-    color: #bfcbd9;
+    color: var(--wp-sidebar-text);
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
 
     &:hover {
-      background-color: #263445;
+      background-color: var(--wp-sidebar-active-bg);
     }
 
     &.is-active {
-      color: #409eff;
-      background-color: #263445;
+      color: var(--wp-sidebar-text-active);
+      background-color: var(--wp-sidebar-active-bg);
+      border-left-color: var(--el-color-primary);
     }
   }
 }

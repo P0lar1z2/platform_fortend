@@ -30,12 +30,6 @@ function viewMatchDetail(traceId: string) {
 
 <template>
   <div class="match-verification-view">
-    <el-page-header title="Matches" @back="$router.push('/')">
-      <template #content>
-        <span class="page-title">Match Verification</span>
-      </template>
-    </el-page-header>
-
     <div class="content">
       <el-card class="search-card">
         <el-form :inline="true" @submit.prevent="handleSearch">
@@ -144,10 +138,6 @@ function viewMatchDetail(traceId: string) {
 .match-verification-view {
   .page-title {
     font-weight: 600;
-  }
-
-  .content {
-    margin-top: 20px;
   }
 
   .search-card {

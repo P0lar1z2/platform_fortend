@@ -55,29 +55,23 @@ function goToMatches() {
 
 <template>
   <div class="trace-detail-view">
-    <el-page-header @back="$router.push('/traces')">
-      <template #content>
-        <span class="page-title">Trace Detail</span>
-      </template>
-      <template #extra>
+    <div class="content">
+      <div class="page-toolbar">
         <el-space>
-          <el-button @click="goToWatch">
+          <el-button :disabled="!tracesStore.currentTrace" @click="goToWatch">
             <el-icon><Goods /></el-icon>
             View Watch
           </el-button>
-          <el-button type="success" @click="goToMatches">
+          <el-button type="success" :disabled="!tracesStore.currentTrace" @click="goToMatches">
             <el-icon><Connection /></el-icon>
             View Matches
           </el-button>
-          <el-button type="warning" @click="showReplayDialog = true">
+          <el-button type="warning" :disabled="!tracesStore.currentTrace" @click="showReplayDialog = true">
             <el-icon><RefreshRight /></el-icon>
             Replay
           </el-button>
         </el-space>
-      </template>
-    </el-page-header>
-
-    <div class="content">
+      </div>
       <el-alert
         v-if="tracesStore.error"
         :title="tracesStore.error"
@@ -169,7 +163,19 @@ function goToMatches() {
           </el-card>
         </template>
 
-        <el-empty v-else-if="!tracesStore.loading" description="Trace not found" />
+        <el-empty v-else-if="!tracesStore.loading" description="Trace not found">
+          <template #default>
+            <p class="not-found-hint">Trace ID: <code>{{ traceId }}</code></p>
+            <el-space>
+              <el-button type="primary" @click="$router.push('/traces')">
+                Back to List
+              </el-button>
+              <el-button @click="tracesStore.fetchTrace(traceId)">
+                Retry
+              </el-button>
+            </el-space>
+          </template>
+        </el-empty>
       </div>
     </div>
 
@@ -187,8 +193,8 @@ function goToMatches() {
     font-weight: 600;
   }
 
-  .content {
-    margin-top: 20px;
+  .page-toolbar {
+    margin-bottom: 16px;
   }
 
   .error-alert {
@@ -218,6 +224,11 @@ function goToMatches() {
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 12px;
+  }
+
+  .not-found-hint {
+    color: #909399;
+    margin-bottom: 16px;
   }
 }
 </style>

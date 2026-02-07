@@ -81,6 +81,7 @@ export interface SubmitItem {
 
 export interface SubmitResponse {
   submitted: number
+  traceIds: string[]
 }
 
 /**
@@ -95,5 +96,10 @@ export async function submitItems(
       item_id: item.itemId,
     })),
   })
-  return unwrapResponse(response)
+  const result = unwrapResponse(response)
+  // Convert snake_case to camelCase
+  return {
+    submitted: result.submitted,
+    traceIds: (result as any).trace_ids || [],
+  }
 }

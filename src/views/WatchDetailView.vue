@@ -34,11 +34,8 @@ function goToMatches() {
 
 <template>
   <div class="watch-detail-view">
-    <el-page-header @back="$router.push('/watches')">
-      <template #content>
-        <span class="page-title">Watch Detail</span>
-      </template>
-      <template #extra>
+    <div class="content">
+      <div class="page-toolbar">
         <el-space>
           <el-button @click="goToTrace">
             <el-icon><List /></el-icon>
@@ -49,10 +46,7 @@ function goToMatches() {
             View Matches
           </el-button>
         </el-space>
-      </template>
-    </el-page-header>
-
-    <div class="content">
+      </div>
       <el-alert
         v-if="watchesStore.error"
         :title="watchesStore.error"
@@ -76,8 +70,8 @@ function goToMatches() {
     font-weight: 600;
   }
 
-  .content {
-    margin-top: 20px;
+  .page-toolbar {
+    margin-bottom: 16px;
   }
 }
 </style>

@@ -1,0 +1,615 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  listJobs,
+  createJob,
+  updateJob,
+  deleteJob,
+  getJobHistory,
+  runJob,
+  type ScheduledJob,
+  type JobExecution,
+  type CreateJobRequest,
+} from '@/api/scheduler'
+import { getWatchBaseBrands, type WatchBaseBrand } from '@/api/watchbase'
+
+// State
+const jobs = ref<ScheduledJob[]>([])
+const brands = ref<WatchBaseBrand[]>([])
+const loading = ref(false)
+const dialogVisible = ref(false)
+const historyDialogVisible = ref(false)
+const editMode = ref(false)
+const editingJobId = ref<string | null>(null)
+const jobHistory = ref<JobExecution[]>([])
+const historyLoading = ref(false)
+
+// Form state
+const formData = ref({
+  name: '',
+  jobType: 'watchbase_scrape',
+  brandSlug: '',
+  platform: '',
+  keyword: '',
+  cronPreset: 'daily',
+  cronHour: '00',
+  cronMinute: '00',
+  cronCustom: '',
+  enabled: true,
+  runOnce: false,
+})
+
+// Cron presets
+const cronPresets = [
+  { label: '每天', value: 'daily' },
+  { label: '每周一', value: 'weekly' },
+  { label: '每小时', value: 'hourly' },
+  { label: '每 6 小时', value: 'every6h' },
+  { label: '自定义', value: 'custom' },
+]
+
+const jobTypes = [
+  { label: 'WatchBase 爬取', value: 'watchbase_scrape' },
+  { label: '平台搜索', value: 'platform_search' },
+]
+
+const platforms = [
+  { label: 'StarBuyer', value: 'starbuyer' },
+  { label: 'EcoAuc', value: 'ecoauc' },
+  { label: 'Yahoo Auctions', value: 'yahoo_auctions' },
+  { label: 'Rakuten', value: 'rakuten' },
+]
+
+// Computed
+const cronExpression = computed(() => {
+  const { cronPreset, cronHour, cronMinute, cronCustom } = formData.value
+  switch (cronPreset) {
+    case 'daily':
+      return `0 ${cronMinute} ${cronHour} * * *`
+    case 'weekly':
+      return `0 ${cronMinute} ${cronHour} * * 1`
+    case 'hourly':
+      return `0 ${cronMinute} * * * *`
+    case 'every6h':
+      return `0 ${cronMinute} */6 * * *`
+    case 'custom':
+      return cronCustom
+    default:
+      return `0 0 0 * * *`
+  }
+})
+
+// Methods
+async function fetchJobs() {
+  loading.value = true
+  try {
+    jobs.value = await listJobs()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '获取任务列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function fetchBrands() {
+  try {
+    brands.value = await getWatchBaseBrands()
+  } catch (e) {
+    console.error('Failed to fetch brands:', e)
+  }
+}
+
+function openCreateDialog() {
+  editMode.value = false
+  editingJobId.value = null
+  formData.value = {
+    name: '',
+    jobType: 'watchbase_scrape',
+    brandSlug: '',
+    platform: '',
+    keyword: '',
+    cronPreset: 'daily',
+    cronHour: '00',
+    cronMinute: '00',
+    cronCustom: '',
+    enabled: true,
+    runOnce: false,
+  }
+  dialogVisible.value = true
+}
+
+function openEditDialog(job: ScheduledJob) {
+  editMode.value = true
+  editingJobId.value = job.id
+
+  // Parse cron to preset
+  let cronPreset = 'custom'
+  let cronHour = '00'
+  let cronMinute = '00'
+  const parts = job.cron.split(' ')
+  if (parts.length === 6) {
+    cronMinute = parts[1].padStart(2, '0')
+    cronHour = parts[2] === '*' ? '00' : parts[2].padStart(2, '0')
+
+    if (parts[2] !== '*' && parts[3] === '*' && parts[4] === '*' && parts[5] === '*') {
+      cronPreset = 'daily'
+    } else if (parts[2] !== '*' && parts[5] === '1') {
+      cronPreset = 'weekly'
+    } else if (parts[2] === '*') {
+      cronPreset = 'hourly'
+    } else if (parts[2] === '*/6') {
+      cronPreset = 'every6h'
+    }
+  }
+
+  formData.value = {
+    name: job.name,
+    jobType: job.jobType,
+    brandSlug: job.config.brandSlug || '',
+    platform: job.config.platform || '',
+    keyword: job.config.keyword || '',
+    cronPreset,
+    cronHour,
+    cronMinute,
+    cronCustom: cronPreset === 'custom' ? job.cron : '',
+    enabled: job.enabled,
+    runOnce: job.runOnce || false,
+  }
+  dialogVisible.value = true
+}
+
+async function handleSubmit() {
+  const { name, jobType, brandSlug, platform, keyword, enabled, runOnce } = formData.value
+
+  if (!name.trim()) {
+    ElMessage.warning('请输入任务名称')
+    return
+  }
+
+  const config: CreateJobRequest['config'] = {}
+  if (jobType === 'watchbase_scrape') {
+    if (!brandSlug) {
+      ElMessage.warning('请选择品牌')
+      return
+    }
+    config.brand_slug = brandSlug
+  } else if (jobType === 'platform_search') {
+    if (!platform || !keyword.trim()) {
+      ElMessage.warning('请选择平台并输入关键词')
+      return
+    }
+    config.platform = platform
+    config.keyword = keyword.trim()
+  }
+
+  try {
+    if (editMode.value && editingJobId.value) {
+      await updateJob(editingJobId.value, {
+        name: name.trim(),
+        cron: cronExpression.value,
+        config,
+        enabled,
+        run_once: runOnce,
+      })
+      ElMessage.success('任务更新成功')
+    } else {
+      const request: CreateJobRequest = {
+        name: name.trim(),
+        job_type: jobType,
+        cron: cronExpression.value,
+        config,
+        enabled,
+        run_once: runOnce,
+      }
+      await createJob(request)
+      ElMessage.success('任务创建成功')
+    }
+    dialogVisible.value = false
+    await fetchJobs()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '操作失败')
+  }
+}
+
+async function handleToggleEnabled(job: ScheduledJob) {
+  try {
+    await updateJob(job.id, { enabled: !job.enabled })
+    job.enabled = !job.enabled
+    ElMessage.success(job.enabled ? '任务已启用' : '任务已禁用')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '操作失败')
+  }
+}
+
+async function handleDelete(job: ScheduledJob) {
+  try {
+    await ElMessageBox.confirm(`确定要删除任务 "${job.name}" 吗？`, '确认删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+
+    await deleteJob(job.id)
+    ElMessage.success('任务已删除')
+    await fetchJobs()
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error(e instanceof Error ? e.message : '删除失败')
+    }
+  }
+}
+
+async function handleRunNow(job: ScheduledJob) {
+  try {
+    await runJob(job.id)
+    ElMessage.success(`任务 "${job.name}" 已加入执行队列`)
+    // Refresh to show updated lastRun
+    setTimeout(() => fetchJobs(), 1000)
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '执行失败')
+  }
+}
+
+async function openHistoryDialog(job: ScheduledJob) {
+  editingJobId.value = job.id
+  historyDialogVisible.value = true
+  historyLoading.value = true
+  try {
+    jobHistory.value = await getJobHistory(job.id, 20)
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '获取历史失败')
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+function formatDate(dateStr: string | undefined): string {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleString()
+}
+
+function formatJobType(type: string): string {
+  const found = jobTypes.find((t) => t.value === type)
+  return found ? found.label : type
+}
+
+function formatCron(cron: string): string {
+  const parts = cron.split(' ')
+  if (parts.length !== 6) return cron
+
+  const [, minute, hour, dayOfMonth, , dayOfWeek] = parts
+
+  if (hour !== '*' && dayOfMonth === '*' && dayOfWeek === '*') {
+    return `每天 ${hour}:${minute.padStart(2, '0')}`
+  }
+  if (hour !== '*' && dayOfWeek === '1') {
+    return `每周一 ${hour}:${minute.padStart(2, '0')}`
+  }
+  if (hour === '*') {
+    return `每小时 :${minute.padStart(2, '0')}`
+  }
+  if (hour === '*/6') {
+    return `每 6 小时 :${minute.padStart(2, '0')}`
+  }
+  return cron
+}
+
+function getStatusType(
+  status: string
+): 'success' | 'warning' | 'danger' | 'info' {
+  switch (status) {
+    case 'completed':
+      return 'success'
+    case 'running':
+      return 'warning'
+    case 'failed':
+      return 'danger'
+    default:
+      return 'info'
+  }
+}
+
+// Lifecycle
+onMounted(async () => {
+  await Promise.all([fetchJobs(), fetchBrands()])
+})
+</script>
+
+<template>
+  <div class="scheduler-view">
+    <div class="content">
+      <el-card>
+        <template #header>
+          <div class="card-header">
+            <span>任务列表</span>
+            <el-button type="primary" @click="openCreateDialog">
+              <el-icon><Plus /></el-icon>
+              新建任务
+            </el-button>
+          </div>
+        </template>
+        <el-table v-loading="loading" :data="jobs" stripe style="width: 100%">
+          <el-table-column label="状态" width="80">
+            <template #default="{ row }">
+              <el-switch
+                :model-value="row.enabled"
+                @change="handleToggleEnabled(row)"
+              />
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="name" label="任务名称" min-width="150" />
+
+          <el-table-column label="类型" width="180">
+            <template #default="{ row }">
+              <el-space>
+                <el-tag>{{ formatJobType(row.jobType) }}</el-tag>
+                <el-tag v-if="row.runOnce" type="warning" size="small">一次性</el-tag>
+              </el-space>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="配置" min-width="160">
+            <template #default="{ row }">
+              <span v-if="row.jobType === 'watchbase_scrape'">
+                品牌: {{ row.config.brandSlug === '__all__' ? '所有品牌' : (row.config.brandSlug || '-') }}
+              </span>
+              <span v-else-if="row.jobType === 'platform_search'">
+                {{ row.config.platform }}: {{ row.config.keyword }}
+              </span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="执行周期" width="160">
+            <template #default="{ row }">
+              <el-tooltip :content="row.cron" placement="top">
+                <span>{{ formatCron(row.cron) }}</span>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="上次执行" width="180">
+            <template #default="{ row }">
+              <div>{{ formatDate(row.lastRun) }}</div>
+              <el-tag
+                v-if="row.lastError"
+                type="danger"
+                size="small"
+                style="margin-top: 4px"
+              >
+                失败
+              </el-tag>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="操作" width="280" fixed="right">
+            <template #default="{ row }">
+              <el-button-group size="small">
+                <el-button type="success" @click="handleRunNow(row)">
+                  立即运行
+                </el-button>
+                <el-button type="primary" @click="openEditDialog(row)">
+                  编辑
+                </el-button>
+                <el-button @click="openHistoryDialog(row)">
+                  历史
+                </el-button>
+                <el-button type="danger" @click="handleDelete(row)">
+                  删除
+                </el-button>
+              </el-button-group>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-empty v-if="!loading && jobs.length === 0" description="暂无定时任务" />
+      </el-card>
+    </div>
+
+    <!-- Create/Edit Dialog -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editMode ? '编辑任务' : '创建定时任务'"
+      width="500px"
+    >
+      <el-form :model="formData" label-width="100px">
+        <el-form-item label="任务名称" required>
+          <el-input
+            v-model="formData.name"
+            placeholder="输入任务名称"
+          />
+        </el-form-item>
+
+        <el-form-item v-if="!editMode" label="任务类型" required>
+          <el-select v-model="formData.jobType" style="width: 100%">
+            <el-option
+              v-for="type in jobTypes"
+              :key="type.value"
+              :label="type.label"
+              :value="type.value"
+            />
+          </el-select>
+        </el-form-item>
+
+        <!-- WatchBase config -->
+        <el-form-item
+          v-if="formData.jobType === 'watchbase_scrape'"
+          label="品牌"
+          required
+        >
+          <el-select
+            v-model="formData.brandSlug"
+            filterable
+            placeholder="选择品牌"
+            style="width: 100%"
+          >
+            <el-option
+              key="__all__"
+              label="所有品牌"
+              value="__all__"
+            />
+            <el-option
+              v-for="brand in brands"
+              :key="brand.slug"
+              :label="brand.name"
+              :value="brand.slug"
+            />
+          </el-select>
+        </el-form-item>
+
+        <!-- Platform search config -->
+        <template v-if="formData.jobType === 'platform_search'">
+          <el-form-item label="平台" required>
+            <el-select
+              v-model="formData.platform"
+              placeholder="选择平台"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="p in platforms"
+                :key="p.value"
+                :label="p.label"
+                :value="p.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="关键词" required>
+            <el-input
+              v-model="formData.keyword"
+              placeholder="输入搜索关键词"
+            />
+          </el-form-item>
+        </template>
+
+        <el-form-item label="执行周期" required>
+          <el-select v-model="formData.cronPreset" style="width: 100%">
+            <el-option
+              v-for="preset in cronPresets"
+              :key="preset.value"
+              :label="preset.label"
+              :value="preset.value"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item
+          v-if="formData.cronPreset !== 'custom'"
+          label="执行时间"
+        >
+          <el-space>
+            <el-select
+              v-if="formData.cronPreset !== 'hourly'"
+              v-model="formData.cronHour"
+              style="width: 80px"
+            >
+              <el-option
+                v-for="h in 24"
+                :key="h - 1"
+                :label="String(h - 1).padStart(2, '0')"
+                :value="String(h - 1).padStart(2, '0')"
+              />
+            </el-select>
+            <span v-if="formData.cronPreset !== 'hourly'">:</span>
+            <el-select v-model="formData.cronMinute" style="width: 80px">
+              <el-option
+                v-for="m in [0, 15, 30, 45]"
+                :key="m"
+                :label="String(m).padStart(2, '0')"
+                :value="String(m).padStart(2, '0')"
+              />
+            </el-select>
+          </el-space>
+        </el-form-item>
+
+        <el-form-item v-if="formData.cronPreset === 'custom'" label="Cron 表达式">
+          <el-input
+            v-model="formData.cronCustom"
+            placeholder="秒 分 时 日 月 周 (例: 0 0 8 * * *)"
+          />
+        </el-form-item>
+
+        <el-form-item label="预览">
+          <el-tag type="info">{{ cronExpression }}</el-tag>
+        </el-form-item>
+
+        <el-form-item label="启用">
+          <el-switch v-model="formData.enabled" />
+        </el-form-item>
+
+        <el-form-item label="一次性任务">
+          <el-switch v-model="formData.runOnce" />
+          <span class="form-hint">启用后任务执行一次即自动禁用</span>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmit">
+          {{ editMode ? '保存' : '创建' }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- History Dialog -->
+    <el-dialog
+      v-model="historyDialogVisible"
+      title="执行历史"
+      width="700px"
+    >
+      <el-table
+        v-loading="historyLoading"
+        :data="jobHistory"
+        stripe
+        size="small"
+      >
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)" size="small">
+              {{ row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="开始时间" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.startedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="完成时间" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.completedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="错误" min-width="200">
+          <template #default="{ row }">
+            <el-text v-if="row.error" type="danger" truncated>
+              {{ row.error }}
+            </el-text>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-empty
+        v-if="!historyLoading && jobHistory.length === 0"
+        description="暂无执行记录"
+      />
+    </el-dialog>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.scheduler-view {
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .form-hint {
+    margin-left: 12px;
+    color: #909399;
+    font-size: 12px;
+  }
+}
+</style>

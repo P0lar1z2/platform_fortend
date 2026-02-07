@@ -57,6 +57,18 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Manual Crawl' },
   },
   {
+    path: '/database',
+    name: 'database-browser',
+    component: () => import('@/views/DatabaseBrowserView.vue'),
+    meta: { title: 'Database Browser' },
+  },
+  {
+    path: '/admin/scheduler',
+    name: 'scheduler',
+    component: () => import('@/views/SchedulerView.vue'),
+    meta: { title: '定时任务' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

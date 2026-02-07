@@ -16,12 +16,6 @@ function handleSearch(query: ReferenceQuery) {
 
 <template>
   <div class="reference-list-view">
-    <el-page-header title="References" @back="$router.push('/')">
-      <template #content>
-        <span class="page-title">Reference Watches</span>
-      </template>
-    </el-page-header>
-
     <div class="content">
       <ReferenceFilters @search="handleSearch" />
 
@@ -54,10 +48,6 @@ function handleSearch(query: ReferenceQuery) {
 .reference-list-view {
   .page-title {
     font-weight: 600;
-  }
-
-  .content {
-    margin-top: 20px;
   }
 
   .card-header {

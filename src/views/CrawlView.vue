@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCrawlStore } from '@/stores'
 import CrawlItemGrid from '@/components/crawl/CrawlItemGrid.vue'
 import CrawlDetailDrawer from '@/components/crawl/CrawlDetailDrawer.vue'
 import type { CrawlItem } from '@/types/crawl'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+const router = useRouter()
 const crawlStore = useCrawlStore()
 
 const selectedPlatform = ref('')
@@ -21,6 +23,11 @@ onMounted(async () => {
   await crawlStore.fetchPlatforms()
 })
 
+function sanitizeKeyword(input: string): string {
+  // Remove potentially dangerous characters
+  return input.replace(/[<>'"`;\\]/g, '').trim()
+}
+
 async function handleSearch() {
   if (!selectedPlatform.value) {
     ElMessage.warning('Please select a platform')
@@ -31,9 +38,19 @@ async function handleSearch() {
     return
   }
 
+  const sanitized = sanitizeKeyword(keyword.value)
+  if (sanitized.length === 0) {
+    ElMessage.warning('Keyword contains only invalid characters')
+    return
+  }
+  if (sanitized.length > 100) {
+    ElMessage.warning('Keyword is too long (max 100 characters)')
+    return
+  }
+
   currentPage.value = 1
   crawlStore.clearSelection()
-  await crawlStore.search(selectedPlatform.value, keyword.value.trim(), 1)
+  await crawlStore.search(selectedPlatform.value, sanitized, 1)
 }
 
 async function handlePageChange(page: number) {
@@ -46,6 +63,10 @@ function handleSelect(itemId: string) {
 }
 
 async function handleViewDetail(item: CrawlItem) {
+  if (selectedPlatform.value === 'rakuten') {
+    ElMessage.info('Rakuten does not support item detail view')
+    return
+  }
   detailVisible.value = true
   await crawlStore.fetchDetail(selectedPlatform.value, item.id)
 }
@@ -75,24 +96,26 @@ async function handleSubmit() {
       }
     )
 
-    const submitted = await crawlStore.submitSelected()
-    ElMessage.success(`Successfully submitted ${submitted} items to the pipeline`)
+    const result = await crawlStore.submitSelected()
+    ElMessage.success(`Successfully submitted ${result.submitted} items to the pipeline`)
   } catch (e) {
     if (e !== 'cancel') {
       ElMessage.error(e instanceof Error ? e.message : 'Failed to submit items')
     }
   }
 }
+
+function goToTrace(traceId: string) {
+  router.push(`/traces/${traceId}`)
+}
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString()
+}
 </script>
 
 <template>
   <div class="crawl-view">
-    <el-page-header title="Crawl" @back="$router.push('/')">
-      <template #content>
-        <span class="page-title">Manual Crawl</span>
-      </template>
-    </el-page-header>
-
     <div class="content">
       <!-- Search Section -->
       <el-card class="search-card">
@@ -141,6 +164,8 @@ async function handleSubmit() {
               v-model="keyword"
               placeholder="Search keyword"
               style="width: 300px"
+              maxlength="100"
+              show-word-limit
               clearable
               @keyup.enter="handleSearch"
             />
@@ -217,6 +242,50 @@ async function handleSubmit() {
         description="Select a platform and enter a keyword to search for items"
       />
 
+      <!-- Recent Submissions Section -->
+      <el-card v-if="crawlStore.recentSubmissions.length > 0" class="recent-submissions-card">
+        <template #header>
+          <div class="card-header">
+            <span>
+              Recent Submissions
+              <el-tag type="success" style="margin-left: 8px">
+                {{ crawlStore.recentSubmissions.length }} traces
+              </el-tag>
+            </span>
+            <el-button size="small" @click="crawlStore.clearRecentSubmissions">
+              Clear
+            </el-button>
+          </div>
+        </template>
+
+        <el-table :data="crawlStore.recentSubmissions" size="small" stripe>
+          <el-table-column prop="traceId" label="Trace ID" width="320">
+            <template #default="{ row }">
+              <el-link type="primary" @click="goToTrace(row.traceId)">
+                {{ row.traceId }}
+              </el-link>
+            </template>
+          </el-table-column>
+          <el-table-column prop="platform" label="Platform" width="120">
+            <template #default="{ row }">
+              <el-tag size="small">{{ row.platform }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="Submitted At">
+            <template #default="{ row }">
+              {{ formatTime(row.submittedAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="Actions" width="100">
+            <template #default="{ row }">
+              <el-button size="small" type="primary" link @click="goToTrace(row.traceId)">
+                View
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+
       <!-- Submit Button (Fixed at bottom) -->
       <div v-if="crawlStore.selectedCount > 0" class="submit-container">
         <el-card shadow="always" class="submit-card">
@@ -255,7 +324,6 @@ async function handleSubmit() {
   }
 
   .content {
-    margin-top: 20px;
     padding-bottom: 80px; // Space for fixed submit button
   }
 
@@ -284,6 +352,16 @@ async function handleSubmit() {
     margin-top: 20px;
     display: flex;
     justify-content: center;
+  }
+
+  .recent-submissions-card {
+    margin-top: 20px;
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
   }
 
   .submit-container {
