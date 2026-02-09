@@ -63,10 +63,28 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Database Browser' },
   },
   {
+    path: '/admin/crawl-status',
+    name: 'crawl-status',
+    component: () => import('@/views/CrawlStatusView.vue'),
+    meta: { title: 'Crawl Status' },
+  },
+  {
     path: '/admin/scheduler',
     name: 'scheduler',
     component: () => import('@/views/SchedulerView.vue'),
     meta: { title: '定时任务' },
+  },
+  {
+    path: '/admin/matcher',
+    name: 'matcher',
+    component: () => import('@/views/MatcherView.vue'),
+    meta: { title: 'Matcher' },
+  },
+  {
+    path: '/admin/corvus',
+    name: 'corvus',
+    component: () => import('@/views/CorvusView.vue'),
+    meta: { title: 'Corvus' },
   },
   {
     path: '/:pathMatch(.*)*',

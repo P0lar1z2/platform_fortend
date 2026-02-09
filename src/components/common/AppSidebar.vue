@@ -15,7 +15,10 @@ const activeMenu = computed(() => {
   if (path.startsWith('/references')) return '/references'
   if (path.startsWith('/crawl')) return '/crawl'
   if (path.startsWith('/database')) return '/database'
+  if (path.startsWith('/admin/crawl-status')) return '/admin/crawl-status'
   if (path.startsWith('/admin/scheduler')) return '/admin/scheduler'
+  if (path.startsWith('/admin/matcher')) return '/admin/matcher'
+  if (path.startsWith('/admin/corvus')) return '/admin/corvus'
   return '/'
 })
 
@@ -67,9 +70,21 @@ function handleMenuSelect(index: string) {
 
       <el-divider style="margin: 8px 16px; border-color: rgba(255, 255, 255, 0.1);" />
 
+      <el-menu-item index="/admin/crawl-status">
+        <el-icon><Monitor /></el-icon>
+        <template #title>Crawl Status</template>
+      </el-menu-item>
       <el-menu-item index="/admin/scheduler">
         <el-icon><Timer /></el-icon>
         <template #title>定时任务</template>
+      </el-menu-item>
+      <el-menu-item index="/admin/matcher">
+        <el-icon><Search /></el-icon>
+        <template #title>Matcher</template>
+      </el-menu-item>
+      <el-menu-item index="/admin/corvus">
+        <el-icon><MagicStick /></el-icon>
+        <template #title>Corvus</template>
       </el-menu-item>
     </el-menu>
   </el-aside>

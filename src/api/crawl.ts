@@ -1,6 +1,6 @@
 import apiClient, { unwrapResponse } from './index'
 import type { ApiResponse } from './types'
-import type { Platform, SearchResult, CrawlItemDetail } from '@/types/crawl'
+import type { Platform, SearchResult, CrawlItemDetail, CrawlServiceStatus } from '@/types/crawl'
 
 /**
  * List all available platforms with their health status
@@ -71,6 +71,14 @@ export async function getItemDetail(
     },
     timeout: 120000, // 2 minutes for crawl requests
   })
+  return unwrapResponse(response)
+}
+
+/**
+ * Get crawl service status
+ */
+export async function getCrawlStatus(): Promise<CrawlServiceStatus> {
+  const response = await apiClient.get<ApiResponse<CrawlServiceStatus>>('/api/crawl/status')
   return unwrapResponse(response)
 }
 
