@@ -7,11 +7,9 @@ import {
   triggerSync,
   matcherSearch,
   getMatcherStats,
-  getMatcherUsage,
   type MatcherHealth,
   type SyncStatus,
   type MatcherStats,
-  type MatcherUsage,
   type MatcherSearchResult,
 } from '@/api/matcher'
 
@@ -19,14 +17,11 @@ import {
 const health = ref<MatcherHealth | null>(null)
 const syncStatus = ref<SyncStatus | null>(null)
 const stats = ref<MatcherStats | null>(null)
-const usage = ref<MatcherUsage | null>(null)
 const healthLoading = ref(false)
 const syncLoading = ref(false)
 const statsLoading = ref(false)
-const usageLoading = ref(false)
 const searchLoading = ref(false)
 const triggerLoading = ref(false)
-const usageDays = ref(30)
 
 // Search form
 const searchQuery = ref('')
@@ -67,17 +62,6 @@ async function loadStats() {
     stats.value = null
   } finally {
     statsLoading.value = false
-  }
-}
-
-async function loadUsage() {
-  usageLoading.value = true
-  try {
-    usage.value = await getMatcherUsage(usageDays.value)
-  } catch (e: any) {
-    usage.value = null
-  } finally {
-    usageLoading.value = false
   }
 }
 
@@ -152,7 +136,6 @@ onMounted(() => {
   loadHealth()
   loadSyncStatus()
   loadStats()
-  loadUsage()
 })
 </script>
 
@@ -272,71 +255,6 @@ onMounted(() => {
       </el-col>
     </el-row>
 
-    <!-- Voyage Usage -->
-    <el-card v-loading="usageLoading" shadow="hover" style="margin-bottom: 20px">
-      <template #header>
-        <div class="card-header">
-          <span>Voyage Usage & Cost</span>
-          <div>
-            <span style="margin-right: 8px">Days</span>
-            <el-input-number v-model="usageDays" :min="1" :max="180" :step="1" size="small" />
-            <el-button text type="primary" style="margin-left: 8px" @click="loadUsage">Refresh</el-button>
-          </div>
-        </div>
-      </template>
-      <template v-if="usage">
-        <el-row :gutter="16" style="margin-bottom: 12px">
-          <el-col :span="6">
-            <el-statistic title="Requests" :value="usage.totals.requestsTotal" />
-          </el-col>
-          <el-col :span="6">
-            <el-statistic title="Tokens" :value="usage.totals.tokensTotal" />
-          </el-col>
-          <el-col :span="6">
-            <el-statistic title="Cost (USD)" :value="usage.totals.costUsdTotal" :precision="6" />
-          </el-col>
-          <el-col :span="6">
-            <el-statistic
-              title="Avg Cost / Request (USD)"
-              :value="usage.totals.avgCostUsdPerRequest"
-              :precision="6"
-            />
-          </el-col>
-        </el-row>
-
-        <el-table :data="usage.daily" stripe border size="small" style="margin-bottom: 12px">
-          <el-table-column prop="date" label="Date" width="120" />
-          <el-table-column label="Requests" width="120">
-            <template #default="{ row }">{{ row.totals.requestsTotal }}</template>
-          </el-table-column>
-          <el-table-column label="Tokens" width="140">
-            <template #default="{ row }">{{ row.totals.tokensTotal }}</template>
-          </el-table-column>
-          <el-table-column label="Cost (USD)" width="140">
-            <template #default="{ row }">{{ row.totals.costUsdTotal.toFixed(6) }}</template>
-          </el-table-column>
-          <el-table-column label="Avg Cost/Req (USD)">
-            <template #default="{ row }">{{ row.totals.avgCostUsdPerRequest.toFixed(6) }}</template>
-          </el-table-column>
-        </el-table>
-
-        <el-table :data="usage.byModel" stripe border size="small">
-          <el-table-column prop="api" label="API" width="120" />
-          <el-table-column prop="model" label="Model" />
-          <el-table-column label="Requests" width="120">
-            <template #default="{ row }">{{ row.totals.requestsTotal }}</template>
-          </el-table-column>
-          <el-table-column label="Tokens" width="140">
-            <template #default="{ row }">{{ row.totals.tokensTotal }}</template>
-          </el-table-column>
-          <el-table-column label="Cost (USD)" width="140">
-            <template #default="{ row }">{{ row.totals.costUsdTotal.toFixed(6) }}</template>
-          </el-table-column>
-        </el-table>
-      </template>
-      <el-empty v-else description="No usage data" :image-size="60" />
-    </el-card>
-
     <!-- Search Test -->
     <el-card shadow="hover">
       <template #header>
@@ -347,9 +265,10 @@ onMounted(() => {
         <el-form-item label="Query">
           <el-input
             v-model="searchQuery"
-            placeholder="e.g. Rolex Submariner black dial"
-            style="width: 300px"
-            @keyup.enter="handleSearch"
+            type="textarea"
+            :rows="3"
+            placeholder="e.g. brand: Rolex&#10;reference: 126610LN&#10;model family: Submariner"
+            style="width: 400px"
           />
         </el-form-item>
         <el-form-item label="Top K">
@@ -370,7 +289,23 @@ onMounted(() => {
         <el-tag v-if="searchReranked" type="success" size="small" style="margin-bottom: 8px">Reranked</el-tag>
         <el-tag size="small" style="margin-bottom: 8px; margin-left: 8px">{{ searchTotal }} results</el-tag>
 
-        <el-table :data="searchResults" stripe border size="small">
+        <el-table :data="searchResults" stripe border size="small" row-key="id">
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div style="padding: 12px 20px">
+                <el-row :gutter="24">
+                  <el-col :span="8">
+                    <div class="embed-doc-label">Key Embedding Document</div>
+                    <pre class="embed-doc-text">{{ row.vKey || '(empty)' }}</pre>
+                  </el-col>
+                  <el-col :span="16">
+                    <div class="embed-doc-label">Full Embedding Document</div>
+                    <pre class="embed-doc-text">{{ row.vFull || '(empty)' }}</pre>
+                  </el-col>
+                </el-row>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="score" label="Score" width="100">
             <template #default="{ row }">{{ row.score.toFixed(4) }}</template>
           </el-table-column>
@@ -398,5 +333,23 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.embed-doc-label {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: var(--el-text-color-secondary);
+}
+.embed-doc-text {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
 }
 </style>

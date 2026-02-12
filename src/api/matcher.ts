@@ -41,6 +41,9 @@ export interface UsageAggregate {
   costUsdTotal: number
   avgTokensPerRequest: number
   avgCostUsdPerRequest: number
+  documentsTotal: number
+  avgTokensPerDocument: number
+  avgCostPerDocument: number
 }
 
 export interface UsageDailyItem {
@@ -69,6 +72,8 @@ export interface MatcherSearchResult {
   modelName: string
   reference: string
   url: string
+  vKey: string
+  vFull: string
 }
 
 export interface MatcherSearchResponse {
@@ -134,6 +139,8 @@ export async function matcherSearch(
       modelName: r.model_name,
       reference: r.reference,
       url: r.url,
+      vKey: r.v_key || '',
+      vFull: r.v_full || '',
     })),
     reranked: data.reranked,
     total: data.total,
@@ -161,6 +168,9 @@ function mapUsageAggregate(raw: any): UsageAggregate {
     costUsdTotal: raw?.cost_usd_total ?? 0,
     avgTokensPerRequest: raw?.avg_tokens_per_request ?? 0,
     avgCostUsdPerRequest: raw?.avg_cost_usd_per_request ?? 0,
+    documentsTotal: raw?.documents_total ?? 0,
+    avgTokensPerDocument: raw?.avg_tokens_per_document ?? 0,
+    avgCostPerDocument: raw?.avg_cost_per_document ?? 0,
   }
 }
 
