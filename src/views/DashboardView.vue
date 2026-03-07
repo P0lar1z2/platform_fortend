@@ -49,10 +49,18 @@ const pipelineActive = computed(() => {
         </el-col>
         <el-col :xs="24" :sm="12" :md="6">
           <StatCard
-            title="References"
-            :value="stats.references_total"
+            title="Transactions"
+            :value="stats.transactions_total"
             icon="Collection"
             color="#22C55E"
+          />
+        </el-col>
+        <el-col :xs="24" :sm="12" :md="6">
+          <StatCard
+            title="Catalog"
+            :value="stats.catalog_total"
+            icon="Collection"
+            color="#F59E0B"
           />
         </el-col>
         <el-col :xs="24" :sm="12" :md="6">
@@ -60,17 +68,8 @@ const pipelineActive = computed(() => {
             title="Verification Rate"
             :value="verificationRate"
             icon="CircleCheck"
-            color="#F59E0B"
-            :subtitle="`${stats.matches.verified} / ${stats.matches.total}`"
-          />
-        </el-col>
-        <el-col :xs="24" :sm="12" :md="6">
-          <StatCard
-            title="Pipeline Active"
-            :value="pipelineActive"
-            icon="Loading"
             color="#64748B"
-            :subtitle="`${stats.traces.pending} pending + ${stats.traces.processing} processing`"
+            :subtitle="`${stats.matches.verified} / ${stats.matches.total}`"
           />
         </el-col>
       </el-row>

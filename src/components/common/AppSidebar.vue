@@ -19,6 +19,7 @@ const activeMenu = computed(() => {
   if (path.startsWith('/admin/scheduler')) return '/admin/scheduler'
   if (path.startsWith('/admin/matcher')) return '/admin/matcher'
   if (path.startsWith('/admin/corvus')) return '/admin/corvus'
+  if (path.startsWith('/admin/usage')) return '/admin/usage'
   return '/'
 })
 
@@ -85,6 +86,10 @@ function handleMenuSelect(index: string) {
       <el-menu-item index="/admin/corvus">
         <el-icon><MagicStick /></el-icon>
         <template #title>Corvus</template>
+      </el-menu-item>
+      <el-menu-item index="/admin/usage">
+        <el-icon><Histogram /></el-icon>
+        <template #title>Usage</template>
       </el-menu-item>
     </el-menu>
   </el-aside>

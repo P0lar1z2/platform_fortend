@@ -87,6 +87,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Corvus' },
   },
   {
+    path: '/admin/usage',
+    name: 'usage',
+    component: () => import('@/views/UsageView.vue'),
+    meta: { title: 'Usage' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

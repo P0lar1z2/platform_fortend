@@ -24,7 +24,8 @@ export interface BrandCount {
 export interface DashboardStats {
   traces: TraceStats
   watches_total: number
-  references_total: number
+  transactions_total: number
+  catalog_total: number
   matches: MatchStats
   source_distribution: SourceCount[]
   top_brands: BrandCount[]
