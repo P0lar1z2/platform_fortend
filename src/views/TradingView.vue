@@ -285,11 +285,24 @@ async function runSimulation() {
   simResults.value = []
   fxConversion.value = null
   try {
+    // Pass enriched transactions from Corvus if available (skip MongoDB lookup)
+    const txns = historyTransactions.value.length > 0
+      ? historyTransactions.value
+          .filter(t => t.successful_bid_price != null)
+          .map(t => ({
+            successful_bid_price: t.successful_bid_price!,
+            auction_date: t.auction_date,
+            condition_rank: t.condition_rank,
+            has_box: t.has_box,
+            has_warranty_card: t.has_warranty_card,
+          }))
+      : undefined
     const data = await simulate({
       ...simForm,
       catalog_id: selectedCatalog.value?.catalog_id || undefined,
       warranty_place: simForm.warranty_place || undefined,
       currency: simForm.currency || 'JPY',
+      transactions: txns,
     })
     simResults.value = data.results
     fxConversion.value = data.fx_conversion || null

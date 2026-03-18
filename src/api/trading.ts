@@ -82,6 +82,14 @@ export interface Valuation {
   created_at: string
 }
 
+export interface SimulateTransaction {
+  successful_bid_price?: number
+  auction_date?: string
+  condition_rank?: string
+  has_box?: boolean
+  has_warranty_card?: boolean
+}
+
 export interface SimulateRequest {
   model_number: string
   catalog_id?: string
@@ -94,6 +102,7 @@ export interface SimulateRequest {
   warranty_year?: number
   defect_type?: string
   path_id?: string
+  transactions?: SimulateTransaction[]
 }
 
 export interface CurrencyInfo {
