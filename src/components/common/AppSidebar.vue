@@ -13,6 +13,7 @@ const activeMenu = computed(() => {
   if (path.startsWith('/matches')) return '/matches'
   if (path.startsWith('/traces')) return '/traces'
   if (path.startsWith('/references')) return '/references'
+  if (path.startsWith('/trading')) return '/trading'
   if (path.startsWith('/crawl')) return '/crawl'
   if (path.startsWith('/database')) return '/database'
   if (path.startsWith('/admin/crawl-status')) return '/admin/crawl-status'
@@ -59,6 +60,10 @@ function handleMenuSelect(index: string) {
       <el-menu-item index="/references">
         <el-icon><Collection /></el-icon>
         <template #title>References</template>
+      </el-menu-item>
+      <el-menu-item index="/trading">
+        <el-icon><TrendCharts /></el-icon>
+        <template #title>交易策略</template>
       </el-menu-item>
       <el-menu-item index="/crawl">
         <el-icon><Download /></el-icon>

@@ -1,6 +1,5 @@
 export interface Accessories {
   has_box: boolean
-  has_papers: boolean
   has_warranty_card: boolean
   other: string[]
 }

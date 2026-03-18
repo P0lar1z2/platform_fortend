@@ -63,6 +63,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'Database Browser' },
   },
   {
+    path: '/trading',
+    name: 'trading',
+    component: () => import('@/views/TradingView.vue'),
+    meta: { title: '交易策略' },
+  },
+  {
     path: '/admin/crawl-status',
     name: 'crawl-status',
     component: () => import('@/views/CrawlStatusView.vue'),

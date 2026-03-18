@@ -109,7 +109,6 @@ defineProps<{
             <el-descriptions-item label="Accessories">
               <div class="accessories">
                 <el-tag v-if="watch.accessories?.has_box" type="success" size="small">Box</el-tag>
-                <el-tag v-if="watch.accessories?.has_papers" type="success" size="small">Papers</el-tag>
                 <el-tag v-if="watch.accessories?.has_warranty_card" type="success" size="small">Warranty Card</el-tag>
                 <el-tag
                   v-for="other in watch.accessories?.other"
@@ -119,7 +118,7 @@ defineProps<{
                 >
                   {{ other }}
                 </el-tag>
-                <span v-if="!watch.accessories?.has_box && !watch.accessories?.has_papers && !watch.accessories?.has_warranty_card && !watch.accessories?.other?.length" class="text-muted">
+                <span v-if="!watch.accessories?.has_box && !watch.accessories?.has_warranty_card && !watch.accessories?.other?.length" class="text-muted">
                   None
                 </span>
               </div>
