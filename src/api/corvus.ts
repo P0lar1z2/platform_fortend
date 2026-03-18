@@ -53,3 +53,45 @@ export async function queryById(id: string): Promise<any> {
   })
   return unwrapResponse(response)
 }
+
+// --- Enriched Transactions (Corvus + MongoDB price) ---
+
+export interface EnrichedTransaction {
+  id: string
+  item_id?: string
+  source?: string
+  brand?: string
+  model_number?: string
+  case_material?: string
+  dial_color?: string
+  match_type?: string
+  confidence?: number
+  successful_bid_price?: number
+  auction_date?: string
+  condition_rank?: string
+  has_box?: boolean
+  has_warranty_card?: boolean
+}
+
+export interface PriceSummary {
+  avg_price?: number
+  min_price?: number
+  max_price?: number
+  with_price_count: number
+  total_count: number
+}
+
+export interface EnrichedTransactionsResponse {
+  catalog_id: string
+  transactions: EnrichedTransaction[]
+  count: number
+  price_summary: PriceSummary
+}
+
+export async function getTransactions(catalogId: string): Promise<EnrichedTransactionsResponse> {
+  const response = await apiClient.get<ApiResponse<EnrichedTransactionsResponse>>(
+    '/api/v1/corvus/transactions',
+    { params: { catalog_id: catalogId } }
+  )
+  return unwrapResponse(response)
+}

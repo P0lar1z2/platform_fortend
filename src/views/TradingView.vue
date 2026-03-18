@@ -19,7 +19,7 @@ import {
   type CurrencyInfo,
   type FxRatesResponse,
 } from '@/api/trading'
-import { queryByRef, corvusMatch } from '@/api/corvus'
+import { queryByRef, corvusMatch, getTransactions, type EnrichedTransaction, type PriceSummary } from '@/api/corvus'
 import { matcherSearch } from '@/api/matcher'
 import { ElMessage } from 'element-plus'
 
@@ -38,6 +38,8 @@ interface CatalogItem {
   images?: string[]
   source_engine?: string
   match_score?: number
+  transaction_count?: number
+  starbuyer_count?: number
 }
 
 type SearchEngine = 'corvus_ref' | 'corvus_match' | 'matcher'
@@ -86,7 +88,11 @@ async function searchViaCorvusRef() {
     dial_color: r.dial_color || '',
     images: r.image_url ? [r.image_url] : [],
     source_engine: 'corvus_ref',
+    transaction_count: r.transaction_count || 0,
+    starbuyer_count: r.starbuyer_count || 0,
   }))
+  // Sort by starbuyer_count descending
+  catalogResults.value.sort((a, b) => (b.starbuyer_count || 0) - (a.starbuyer_count || 0))
 }
 
 async function searchViaCorvusMatch() {
@@ -141,9 +147,31 @@ async function searchViaMatcher() {
   }))
 }
 
+// --- Historical transactions (enriched with MongoDB prices) ---
+const historyTransactions = ref<EnrichedTransaction[]>([])
+const historyPriceSummary = ref<PriceSummary | null>(null)
+const historyLoading = ref(false)
+
+async function loadHistoryTransactions(catalogId: string) {
+  historyLoading.value = true
+  historyTransactions.value = []
+  historyPriceSummary.value = null
+  try {
+    const data = await getTransactions(catalogId)
+    historyTransactions.value = data.transactions
+    historyPriceSummary.value = data.price_summary
+  } catch (e: any) {
+    ElMessage.error('加载历史成交失败: ' + (e.response?.data?.error || e.message))
+  } finally {
+    historyLoading.value = false
+  }
+}
+
 function selectCatalog(item: CatalogItem) {
   selectedCatalog.value = item
   simForm.model_number = item.reference
+  // Auto-load historical transactions
+  loadHistoryTransactions(item.catalog_id)
 }
 
 function clearSelection() {
@@ -152,6 +180,8 @@ function clearSelection() {
   catalogResults.value = []
   catalogQuery.value = ''
   discoveryResults.value = []
+  historyTransactions.value = []
+  historyPriceSummary.value = null
 }
 
 // --- Price Discovery ---
@@ -502,6 +532,12 @@ loadFxRates()
               <el-table-column prop="name" label="名称" min-width="200" show-overflow-tooltip />
               <el-table-column prop="case_material" label="材质" width="120" />
               <el-table-column prop="dial_color" label="表盘色" width="80" />
+              <el-table-column label="成交数" width="100" sortable sort-by="starbuyer_count">
+                <template #default="{ row }">
+                  <span style="font-weight: 600;">{{ row.starbuyer_count || 0 }}</span>
+                  <span style="color: #999; font-size: 12px;"> / {{ row.transaction_count || 0 }}</span>
+                </template>
+              </el-table-column>
             </el-table>
 
             <el-empty v-else-if="catalogQuery && !catalogLoading" description="点击搜索在 Catalog 中查找型号" />
@@ -518,15 +554,73 @@ loadFxRates()
           </div>
         </el-card>
 
-        <!-- Step 2: Valuation params -->
-        <el-card style="margin-top: 16px;">
+        <!-- Step 2: Historical transactions + Valuation params -->
+        <el-card v-if="selectedCatalog" style="margin-top: 16px;" v-loading="historyLoading">
           <template #header>
-            <span>Step 2: 输入拍卖参数</span>
+            <div class="card-header">
+              <span>Step 2: 历史成交 & 估值参数</span>
+              <el-tag v-if="historyPriceSummary && historyPriceSummary.with_price_count > 0" type="success" size="small">
+                {{ historyPriceSummary.with_price_count }} 条有价格 / {{ historyPriceSummary.total_count }} 条总计
+              </el-tag>
+            </div>
           </template>
 
+          <!-- Price Summary -->
+          <div v-if="historyPriceSummary && historyPriceSummary.with_price_count > 0" style="margin-bottom: 16px;">
+            <el-row :gutter="16">
+              <el-col :span="6">
+                <el-statistic title="平均价格" :value="historyPriceSummary.avg_price ? Math.round(historyPriceSummary.avg_price) : 0" prefix="¥" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="最低价" :value="historyPriceSummary.min_price || 0" prefix="¥" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="最高价" :value="historyPriceSummary.max_price || 0" prefix="¥" />
+              </el-col>
+              <el-col :span="6">
+                <el-statistic title="有价格记录" :value="historyPriceSummary.with_price_count" />
+              </el-col>
+            </el-row>
+          </div>
+
+          <!-- History Transactions Table -->
+          <el-table
+            v-if="historyTransactions.length > 0"
+            :data="historyTransactions"
+            stripe
+            size="small"
+            max-height="300"
+            style="margin-bottom: 20px;"
+          >
+            <el-table-column prop="auction_date" label="拍卖日期" width="110" sortable />
+            <el-table-column label="成交价 (JPY)" width="130" sortable sort-by="successful_bid_price">
+              <template #default="{ row }">
+                <span v-if="row.successful_bid_price" style="font-weight: 600;">
+                  {{ formatPrice(row.successful_bid_price) }}
+                </span>
+                <span v-else style="color: #ccc;">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="condition_rank" label="成色" width="70" />
+            <el-table-column label="配件" width="120">
+              <template #default="{ row }">
+                <el-tag v-if="row.has_box" size="small" style="margin-right: 2px;">Box</el-tag>
+                <el-tag v-if="row.has_warranty_card" size="small">Card</el-tag>
+                <span v-if="!row.has_box && !row.has_warranty_card" style="color: #ccc;">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="case_material" label="材质" width="100" />
+            <el-table-column prop="dial_color" label="表盘色" width="80" />
+            <el-table-column prop="model_number" label="Ref" width="130" />
+          </el-table>
+
+          <el-empty v-else-if="!historyLoading && selectedCatalog" description="无 StarBuyer 历史成交数据" />
+
+          <!-- Simulation Form -->
+          <el-divider content-position="left">估值参数</el-divider>
           <el-form :model="simForm" label-width="120px" style="max-width: 600px;">
             <el-form-item label="型号 (Reference)">
-              <el-input v-model="simForm.model_number" placeholder="直接输入型号，如 116610LN" />
+              <el-input v-model="simForm.model_number" disabled />
             </el-form-item>
             <el-form-item label="落槌价" required>
               <div style="display: flex; gap: 8px; width: 100%;">
