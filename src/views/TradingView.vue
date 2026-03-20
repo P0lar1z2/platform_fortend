@@ -52,12 +52,23 @@ const searchEngineOptions: { value: SearchEngine; label: string; disabled: boole
 ]
 
 const catalogQuery = ref('')
+const waterfallAttrs = reactive({
+  brand: '',
+  reference: '',
+  dialColor: '',
+  caseMaterial: '',
+  dialIndex: '',
+})
 const catalogResults = ref<CatalogItem[]>([])
 const catalogLoading = ref(false)
 const selectedCatalog = ref<CatalogItem | null>(null)
 
 async function searchCatalog() {
-  if (!catalogQuery.value.trim()) return
+  if (searchEngine.value === 'corvus_match') {
+    if (!waterfallAttrs.reference.trim()) return
+  } else {
+    if (!catalogQuery.value.trim()) return
+  }
   catalogLoading.value = true
   catalogResults.value = []
   try {
@@ -96,16 +107,21 @@ async function searchViaCorvusRef() {
 }
 
 async function searchViaCorvusMatch() {
-  const query = catalogQuery.value.trim()
-  // Parse "brand ref" format, e.g. "rolex 116610LN"
-  const parts = query.split(/\s+/)
-  const brand = parts.length > 1 ? parts[0] : ''
-  const modelNumber = parts.length > 1 ? parts.slice(1).join(' ') : parts[0]
+  const brand = waterfallAttrs.brand.trim()
+  const modelNumber = waterfallAttrs.reference.trim()
+
+  if (!modelNumber) {
+    ElMessage.warning('请输入 Reference')
+    return
+  }
 
   const data = await corvusMatch({
     source: 'manual',
     brand: brand || undefined,
     modelNumber: modelNumber || undefined,
+    dialColor: waterfallAttrs.dialColor || undefined,
+    caseMaterial: waterfallAttrs.caseMaterial || undefined,
+    dialIndex: waterfallAttrs.dialIndex || undefined,
   })
 
   if (data.matched && data.categoryId) {
@@ -179,6 +195,11 @@ function clearSelection() {
   simForm.model_number = ''
   catalogResults.value = []
   catalogQuery.value = ''
+  waterfallAttrs.brand = ''
+  waterfallAttrs.reference = ''
+  waterfallAttrs.dialColor = ''
+  waterfallAttrs.caseMaterial = ''
+  waterfallAttrs.dialIndex = ''
   discoveryResults.value = []
   historyTransactions.value = []
   historyPriceSummary.value = null
@@ -505,9 +526,11 @@ loadFxRates()
                   :disabled="opt.disabled"
                 />
               </el-select>
+              <!-- 非 Waterfall 模式：单输入框 -->
               <el-input
+                v-if="searchEngine !== 'corvus_match'"
                 v-model="catalogQuery"
-                :placeholder="searchEngine === 'corvus_ref' ? '输入 Reference (如 116610LN, 326934)' : searchEngine === 'corvus_match' ? '品牌 + Reference (如 rolex 116610LN)' : '搜索品牌、型号、名称'"
+                :placeholder="searchEngine === 'corvus_ref' ? '输入 Reference (如 116610LN, 326934)' : '搜索品牌、型号、名称'"
                 @keyup.enter="searchCatalog"
                 style="flex: 1;"
               >
@@ -515,6 +538,22 @@ loadFxRates()
                   <el-button :loading="catalogLoading" @click="searchCatalog">搜索</el-button>
                 </template>
               </el-input>
+              <!-- Waterfall 模式：品牌 + Reference 分开 -->
+              <template v-else>
+                <el-input v-model="waterfallAttrs.brand" placeholder="品牌 (如 Rolex)" style="width: 160px;" @keyup.enter="searchCatalog" />
+                <el-input v-model="waterfallAttrs.reference" placeholder="Reference (如 116610LN)" style="flex: 1;" @keyup.enter="searchCatalog">
+                  <template #append>
+                    <el-button :loading="catalogLoading" @click="searchCatalog">搜索</el-button>
+                  </template>
+                </el-input>
+              </template>
+            </div>
+
+            <!-- Waterfall 可选属性 -->
+            <div v-if="searchEngine === 'corvus_match'" style="display: flex; gap: 12px; margin-bottom: 12px;">
+              <el-input v-model="waterfallAttrs.dialColor" placeholder="表盘颜色 (如 Black, Blue)" style="flex: 1;" @keyup.enter="searchCatalog" />
+              <el-input v-model="waterfallAttrs.caseMaterial" placeholder="表壳材质 (如 Steel, YG)" style="flex: 1;" @keyup.enter="searchCatalog" />
+              <el-input v-model="waterfallAttrs.dialIndex" placeholder="刻度类型 (如 Roman, Arabic)" style="flex: 1;" @keyup.enter="searchCatalog" />
             </div>
 
             <el-table

@@ -7,6 +7,7 @@ export interface CorvusMatchRequest {
   modelNumber?: string
   dialColor?: string
   caseMaterial?: string
+  dialIndex?: string
 }
 
 export interface CorvusMatchResponse {
@@ -29,6 +30,7 @@ export async function corvusMatch(params: CorvusMatchRequest): Promise<CorvusMat
     model_number: params.modelNumber,
     dial_color: params.dialColor,
     case_material: params.caseMaterial,
+    dial_index: params.dialIndex,
   })
   const data = unwrapResponse(response)
   return {
