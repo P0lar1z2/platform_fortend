@@ -41,6 +41,10 @@ function handleMenuSelect(index: string) {
       class="sidebar-menu"
       @select="handleMenuSelect"
     >
+      <el-menu-item index="/trading">
+        <el-icon><TrendCharts /></el-icon>
+        <template #title>交易策略</template>
+      </el-menu-item>
       <el-menu-item index="/">
         <el-icon><DataAnalysis /></el-icon>
         <template #title>Dashboard</template>
@@ -53,25 +57,21 @@ function handleMenuSelect(index: string) {
         <el-icon><Connection /></el-icon>
         <template #title>Match Verification</template>
       </el-menu-item>
-      <el-menu-item index="/traces">
-        <el-icon><List /></el-icon>
-        <template #title>Traces</template>
-      </el-menu-item>
       <el-menu-item index="/references">
         <el-icon><Collection /></el-icon>
         <template #title>References</template>
       </el-menu-item>
-      <el-menu-item index="/trading">
-        <el-icon><TrendCharts /></el-icon>
-        <template #title>交易策略</template>
+      <el-menu-item index="/database">
+        <el-icon><Coin /></el-icon>
+        <template #title>Database</template>
+      </el-menu-item>
+      <el-menu-item index="/traces">
+        <el-icon><List /></el-icon>
+        <template #title>Traces</template>
       </el-menu-item>
       <el-menu-item index="/crawl">
         <el-icon><Download /></el-icon>
         <template #title>Manual Crawl</template>
-      </el-menu-item>
-      <el-menu-item index="/database">
-        <el-icon><Coin /></el-icon>
-        <template #title>Database</template>
       </el-menu-item>
 
       <el-divider style="margin: 8px 16px; border-color: rgba(255, 255, 255, 0.1);" />

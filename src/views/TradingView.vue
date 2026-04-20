@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import {
   simulate,
   listSignals,
@@ -89,21 +89,29 @@ async function searchCatalog() {
 async function searchViaCorvusRef() {
   const data = await queryByRef(catalogQuery.value.trim())
   const results = data?.results || data?.data?.results || []
-  catalogResults.value = results.map((r: any) => ({
-    catalog_id: r.catalog_id || '',
-    brand: r.brand || '',
-    reference: r.reference || '',
-    family: r.model_name || '',
-    name: r.model_name || '',
-    case_material: r.case_material || '',
-    dial_color: r.dial_color || '',
-    images: r.image_url ? [r.image_url] : [],
-    source_engine: 'corvus_ref',
-    transaction_count: r.transaction_count || 0,
-    starbuyer_count: r.starbuyer_count || 0,
-  }))
-  // Sort by starbuyer_count descending
-  catalogResults.value.sort((a, b) => (b.starbuyer_count || 0) - (a.starbuyer_count || 0))
+  catalogResults.value = results
+    .map((r: any) => ({
+      catalog_id: r.catalog_id || '',
+      brand: r.brand || '',
+      reference: r.reference || '',
+      family: r.model_name || '',
+      name: r.model_name || '',
+      case_material: r.case_material || '',
+      dial_color: r.dial_color || '',
+      images: r.image_url ? [r.image_url] : [],
+      source_engine: 'corvus_ref',
+      transaction_count: r.transaction_count || 0,
+      starbuyer_count: r.starbuyer_count || 0,
+    }))
+    // Hide rows that have no transactions at all (the "0 / 0" / 未搜 case)
+    .filter((r: CatalogItem) => (r.starbuyer_count || 0) > 0 || (r.transaction_count || 0) > 0)
+  // Sort: rows with images first, then by starbuyer_count desc
+  catalogResults.value.sort((a, b) => {
+    const aHas = a.images && a.images.length > 0 ? 1 : 0
+    const bHas = b.images && b.images.length > 0 ? 1 : 0
+    if (aHas !== bHas) return bHas - aHas
+    return (b.starbuyer_count || 0) - (a.starbuyer_count || 0)
+  })
 }
 
 async function searchViaCorvusMatch() {
@@ -181,6 +189,50 @@ async function loadHistoryTransactions(catalogId: string) {
   } finally {
     historyLoading.value = false
   }
+}
+
+interface PerSourceStats {
+  source: string
+  label: string
+  count: number
+  with_price_count: number
+  avg_price: number | null
+  min_price: number | null
+  max_price: number | null
+}
+
+const historyPerSourceSummary = computed<PerSourceStats[]>(() => {
+  const groups = new Map<string, EnrichedTransaction[]>()
+  for (const t of historyTransactions.value) {
+    const key = t.source || 'unknown'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(t)
+  }
+  const stats: PerSourceStats[] = []
+  for (const [source, txns] of groups.entries()) {
+    const prices = txns
+      .map((t) => t.successful_bid_price)
+      .filter((p): p is number => p != null)
+    const label = txns.find((t) => t.source_label)?.source_label || source
+    stats.push({
+      source,
+      label,
+      count: txns.length,
+      with_price_count: prices.length,
+      avg_price: prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : null,
+      min_price: prices.length ? Math.min(...prices) : null,
+      max_price: prices.length ? Math.max(...prices) : null,
+    })
+  }
+  // Sort by sample count desc so the most informative source comes first
+  stats.sort((a, b) => b.with_price_count - a.with_price_count)
+  return stats
+})
+
+function sourceTagType(source: string): 'success' | 'warning' | 'info' {
+  if (source === 'starbuyers' || source === 'starbuyer') return 'success'
+  if (source === 'ecoauc') return 'warning'
+  return 'info'
 }
 
 function selectCatalog(item: CatalogItem) {
@@ -515,7 +567,7 @@ loadFxRates()
             </div>
           </template>
 
-          <div v-if="!selectedCatalog">
+          <div>
             <div style="display: flex; gap: 12px; margin-bottom: 12px;">
               <el-select v-model="searchEngine" style="width: 220px;">
                 <el-option
@@ -595,7 +647,7 @@ loadFxRates()
             <el-empty v-else-if="catalogQuery && !catalogLoading" description="点击搜索在 Catalog 中查找型号" />
           </div>
 
-          <div v-else class="selected-catalog-info">
+          <div v-if="selectedCatalog" class="selected-catalog-info" style="margin-top: 16px;">
             <el-descriptions :column="3" border size="small">
               <el-descriptions-item label="品牌">{{ selectedCatalog.brand }}</el-descriptions-item>
               <el-descriptions-item label="Reference">{{ selectedCatalog.reference }}</el-descriptions-item>
@@ -631,6 +683,35 @@ loadFxRates()
               </el-col>
               <el-col :span="6">
                 <el-statistic title="有价格记录" :value="historyPriceSummary.with_price_count" />
+              </el-col>
+            </el-row>
+          </div>
+
+          <!-- Per-source price summary -->
+          <div v-if="historyPerSourceSummary.length > 1" style="margin-bottom: 16px;">
+            <el-divider content-position="left">分 source 聚合</el-divider>
+            <el-row :gutter="12">
+              <el-col v-for="s in historyPerSourceSummary" :key="s.source" :span="8" style="margin-bottom: 12px;">
+                <el-card shadow="never" body-style="padding: 12px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <el-tag :type="sourceTagType(s.source)" size="small">{{ s.label }}</el-tag>
+                    <span style="font-size: 12px; color: #999;">
+                      {{ s.with_price_count }} / {{ s.count }} 条
+                    </span>
+                  </div>
+                  <el-row v-if="s.with_price_count > 0" :gutter="8">
+                    <el-col :span="12">
+                      <el-statistic title="均价" :value="s.avg_price ? Math.round(s.avg_price) : 0" prefix="¥" />
+                    </el-col>
+                    <el-col :span="12">
+                      <el-statistic title="最高" :value="s.max_price || 0" prefix="¥" />
+                    </el-col>
+                    <el-col :span="12" style="margin-top: 4px;">
+                      <el-statistic title="最低" :value="s.min_price || 0" prefix="¥" />
+                    </el-col>
+                  </el-row>
+                  <span v-else style="color: #ccc; font-size: 12px;">无价格数据</span>
+                </el-card>
               </el-col>
             </el-row>
           </div>
