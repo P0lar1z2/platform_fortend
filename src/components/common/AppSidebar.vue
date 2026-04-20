@@ -45,57 +45,6 @@ function handleMenuSelect(index: string) {
         <el-icon><TrendCharts /></el-icon>
         <template #title>交易策略</template>
       </el-menu-item>
-      <el-menu-item index="/">
-        <el-icon><DataAnalysis /></el-icon>
-        <template #title>Dashboard</template>
-      </el-menu-item>
-      <el-menu-item index="/watches">
-        <el-icon><Goods /></el-icon>
-        <template #title>Watches</template>
-      </el-menu-item>
-      <el-menu-item index="/matches">
-        <el-icon><Connection /></el-icon>
-        <template #title>Match Verification</template>
-      </el-menu-item>
-      <el-menu-item index="/references">
-        <el-icon><Collection /></el-icon>
-        <template #title>References</template>
-      </el-menu-item>
-      <el-menu-item index="/database">
-        <el-icon><Coin /></el-icon>
-        <template #title>Database</template>
-      </el-menu-item>
-      <el-menu-item index="/traces">
-        <el-icon><List /></el-icon>
-        <template #title>Traces</template>
-      </el-menu-item>
-      <el-menu-item index="/crawl">
-        <el-icon><Download /></el-icon>
-        <template #title>Manual Crawl</template>
-      </el-menu-item>
-
-      <el-divider style="margin: 8px 16px; border-color: rgba(255, 255, 255, 0.1);" />
-
-      <el-menu-item index="/admin/crawl-status">
-        <el-icon><Monitor /></el-icon>
-        <template #title>Crawl Status</template>
-      </el-menu-item>
-      <el-menu-item index="/admin/scheduler">
-        <el-icon><Timer /></el-icon>
-        <template #title>定时任务</template>
-      </el-menu-item>
-      <el-menu-item index="/admin/matcher">
-        <el-icon><Search /></el-icon>
-        <template #title>Matcher</template>
-      </el-menu-item>
-      <el-menu-item index="/admin/corvus">
-        <el-icon><MagicStick /></el-icon>
-        <template #title>Corvus</template>
-      </el-menu-item>
-      <el-menu-item index="/admin/usage">
-        <el-icon><Histogram /></el-icon>
-        <template #title>Usage</template>
-      </el-menu-item>
     </el-menu>
   </el-aside>
 </template>

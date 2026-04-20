@@ -619,12 +619,11 @@ loadFxRates()
             >
               <el-table-column label="图片" width="60">
                 <template #default="{ row }">
-                  <el-image
+                  <img
                     v-if="row.images && row.images.length > 0"
                     :src="row.images[0]"
-                    fit="contain"
-                    style="width: 40px; height: 40px;"
-                    :preview-src-list="row.images"
+                    style="width: 40px; height: 40px; object-fit: contain; display: block;"
+                    alt=""
                   />
                 </template>
               </el-table-column>
@@ -648,15 +647,6 @@ loadFxRates()
             <el-empty v-else-if="catalogQuery && !catalogLoading" description="点击搜索在 Catalog 中查找型号" />
           </div>
 
-          <div v-if="selectedCatalog" class="selected-catalog-info" style="margin-top: 16px;">
-            <el-descriptions :column="3" border size="small">
-              <el-descriptions-item label="品牌">{{ selectedCatalog.brand }}</el-descriptions-item>
-              <el-descriptions-item label="Reference">{{ selectedCatalog.reference }}</el-descriptions-item>
-              <el-descriptions-item label="系列">{{ selectedCatalog.family || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="名称" :span="2">{{ selectedCatalog.name || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="材质">{{ selectedCatalog.case_material || '-' }}</el-descriptions-item>
-            </el-descriptions>
-          </div>
         </el-card>
 
         <!-- Step 2: Historical transactions + Valuation params -->
