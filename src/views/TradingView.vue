@@ -199,10 +199,14 @@ interface PerSourceStats {
   max_price: number | null
 }
 
+// Sources hidden from the per-source aggregation block
+const PER_SOURCE_HIDDEN = new Set(['chrono24'])
+
 const historyPerSourceSummary = computed<PerSourceStats[]>(() => {
   const groups = new Map<string, EnrichedTransaction[]>()
   for (const t of historyTransactions.value) {
     const key = t.source || 'unknown'
+    if (PER_SOURCE_HIDDEN.has(key)) continue
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(t)
   }
@@ -344,6 +348,14 @@ const simForm = reactive<SimulateRequest>({
   warranty_year: undefined,
   defect_type: undefined,
 })
+type SimSource = 'all' | 'ecoauc' | 'starbuyer'
+const simSourceFilter = ref<SimSource>('all')
+function matchesSimSource(source: string | undefined, filter: SimSource): boolean {
+  if (filter === 'all') return true
+  if (filter === 'ecoauc') return source === 'ecoauc'
+  if (filter === 'starbuyer') return source === 'starbuyer' || source === 'starbuyers'
+  return true
+}
 const simLoading = ref(false)
 const simResults = ref<ValuationResult[]>([])
 
@@ -360,6 +372,7 @@ async function runSimulation() {
     const txns = historyTransactions.value.length > 0
       ? historyTransactions.value
           .filter(t => t.successful_bid_price != null)
+          .filter(t => matchesSimSource(t.source, simSourceFilter.value))
           .map(t => ({
             successful_bid_price: t.successful_bid_price!,
             auction_date: t.auction_date,
@@ -750,6 +763,13 @@ loadFxRates()
           <!-- Simulation Form -->
           <el-divider content-position="left">估值参数</el-divider>
           <el-form :model="simForm" label-width="120px" style="max-width: 600px;">
+            <el-form-item label="数据源">
+              <el-radio-group v-model="simSourceFilter">
+                <el-radio-button value="all">全部</el-radio-button>
+                <el-radio-button value="ecoauc">EcoAuc</el-radio-button>
+                <el-radio-button value="starbuyer">StarBuyer</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
             <el-form-item label="型号 (Reference)">
               <el-input v-model="simForm.model_number" disabled />
             </el-form-item>
