@@ -89,22 +89,20 @@ async function searchCatalog() {
 async function searchViaCorvusRef() {
   const data = await queryByRef(catalogQuery.value.trim())
   const results = data?.results || data?.data?.results || []
-  catalogResults.value = results
-    .map((r: any) => ({
-      catalog_id: r.catalog_id || '',
-      brand: r.brand || '',
-      reference: r.reference || '',
-      family: r.model_name || '',
-      name: r.model_name || '',
-      case_material: r.case_material || '',
-      dial_color: r.dial_color || '',
-      images: r.image_url ? [r.image_url] : [],
-      source_engine: 'corvus_ref',
-      transaction_count: r.transaction_count || 0,
-      starbuyer_count: r.starbuyer_count || 0,
-    }))
-    // Hide rows that have no transactions at all (the "0 / 0" / 未搜 case)
-    .filter((r: CatalogItem) => (r.starbuyer_count || 0) > 0 || (r.transaction_count || 0) > 0)
+  catalogResults.value = results.map((r: any) => ({
+    catalog_id: r.catalog_id || '',
+    brand: r.brand || '',
+    reference: r.reference || '',
+    family: r.model_name || '',
+    name: r.model_name || '',
+    case_material: r.case_material || '',
+    dial_color: r.dial_color || '',
+    images: r.image_url ? [r.image_url] : [],
+    source_engine: 'corvus_ref',
+    // Upstream may omit these; keep undefined so the table can show "—"
+    transaction_count: r.transaction_count,
+    starbuyer_count: r.starbuyer_count,
+  }))
   // Sort: rows with images first, then by starbuyer_count desc
   catalogResults.value.sort((a, b) => {
     const aHas = a.images && a.images.length > 0 ? 1 : 0
@@ -638,8 +636,11 @@ loadFxRates()
               <el-table-column prop="dial_color" label="表盘色" width="80" />
               <el-table-column label="成交数" width="100" sortable sort-by="starbuyer_count">
                 <template #default="{ row }">
-                  <span style="font-weight: 600;">{{ row.starbuyer_count || 0 }}</span>
-                  <span style="color: #999; font-size: 12px;"> / {{ row.transaction_count || 0 }}</span>
+                  <template v-if="(row.starbuyer_count ?? 0) > 0 || (row.transaction_count ?? 0) > 0">
+                    <span style="font-weight: 600;">{{ row.starbuyer_count ?? 0 }}</span>
+                    <span style="color: #999; font-size: 12px;"> / {{ row.transaction_count ?? 0 }}</span>
+                  </template>
+                  <span v-else style="color: #ccc;">—</span>
                 </template>
               </el-table-column>
             </el-table>
