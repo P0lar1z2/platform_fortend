@@ -644,6 +644,13 @@ loadFxRates()
             max-height="300"
             style="margin-bottom: 20px;"
           >
+            <el-table-column label="来源" width="110">
+              <template #default="{ row }">
+                <el-tag size="small" :type="row.source === 'ecoauc' ? 'warning' : row.source === 'starbuyers' ? 'success' : 'info'">
+                  {{ row.source_label || row.source || '-' }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="auction_date" label="拍卖日期" width="110" sortable />
             <el-table-column label="成交价 (JPY)" width="130" sortable sort-by="successful_bid_price">
               <template #default="{ row }">
@@ -666,7 +673,7 @@ loadFxRates()
             <el-table-column prop="model_number" label="Ref" width="130" />
           </el-table>
 
-          <el-empty v-else-if="!historyLoading && selectedCatalog" description="无 StarBuyer 历史成交数据" />
+          <el-empty v-else-if="!historyLoading && selectedCatalog" description="无历史成交数据" />
 
           <!-- Simulation Form -->
           <el-divider content-position="left">估值参数</el-divider>

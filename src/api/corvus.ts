@@ -62,6 +62,7 @@ export interface EnrichedTransaction {
   id: string
   item_id?: string
   source?: string
+  source_label?: string
   brand?: string
   model_number?: string
   case_material?: string
