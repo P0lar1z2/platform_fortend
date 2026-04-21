@@ -180,8 +180,18 @@ async function loadHistoryTransactions(catalogId: string) {
   historyPriceSummary.value = null
   try {
     const data = await getTransactions(catalogId)
-    historyTransactions.value = data.transactions
-    historyPriceSummary.value = data.price_summary
+    const filtered = data.transactions.filter((t) => t.source !== 'chrono24')
+    historyTransactions.value = filtered
+    const prices = filtered
+      .map((t) => t.successful_bid_price)
+      .filter((p): p is number => p != null)
+    historyPriceSummary.value = {
+      total_count: filtered.length,
+      with_price_count: prices.length,
+      avg_price: prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : undefined,
+      min_price: prices.length ? Math.min(...prices) : undefined,
+      max_price: prices.length ? Math.max(...prices) : undefined,
+    }
   } catch (e: any) {
     ElMessage.error('加载历史成交失败: ' + (e.response?.data?.error || e.message))
   } finally {
