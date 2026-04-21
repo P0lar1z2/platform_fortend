@@ -67,6 +67,7 @@ export interface EnrichedTransaction {
   model_number?: string
   case_material?: string
   dial_color?: string
+  dial_index?: string
   match_type?: string
   confidence?: number
   successful_bid_price?: number
@@ -74,6 +75,7 @@ export interface EnrichedTransaction {
   condition_rank?: string
   has_box?: boolean
   has_warranty_card?: boolean
+  detail_page_url?: string
 }
 
 export interface PriceSummary {

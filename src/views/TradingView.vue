@@ -765,7 +765,25 @@ loadFxRates()
             </el-table-column>
             <el-table-column prop="case_material" label="材质" width="100" />
             <el-table-column prop="dial_color" label="表盘色" width="80" />
+            <el-table-column prop="dial_index" label="刻度" width="100">
+              <template #default="{ row }">
+                <span v-if="row.dial_index">{{ row.dial_index }}</span>
+                <span v-else style="color: #ccc;">—</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="model_number" label="Ref" width="130" />
+            <el-table-column label="链接" width="80" fixed="right">
+              <template #default="{ row }">
+                <a
+                  v-if="row.detail_page_url"
+                  :href="row.detail_page_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="color: var(--el-color-primary);"
+                >查看</a>
+                <span v-else style="color: #ccc;">—</span>
+              </template>
+            </el-table-column>
           </el-table>
 
           <el-empty v-else-if="!historyLoading && selectedCatalog" description="无历史成交数据" />
