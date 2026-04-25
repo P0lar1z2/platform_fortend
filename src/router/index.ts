@@ -56,9 +56,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/database',
-    name: 'database-browser',
-    component: () => import('@/views/DatabaseBrowserView.vue'),
-    meta: { title: 'Database Browser' },
+    redirect: '/admin/database',
   },
   {
     path: '/trading',
@@ -107,6 +105,12 @@ const routes: RouteRecordRaw[] = [
         name: 'usage',
         component: () => import('@/views/UsageView.vue'),
         meta: { title: 'Usage', adminTab: 'usage' },
+      },
+      {
+        path: 'database',
+        name: 'database-browser',
+        component: () => import('@/views/DatabaseBrowserView.vue'),
+        meta: { title: '数据库', adminTab: 'database' },
       },
     ],
   },
