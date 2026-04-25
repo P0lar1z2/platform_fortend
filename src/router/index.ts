@@ -52,9 +52,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/crawl',
-    name: 'crawl',
-    component: () => import('@/views/CrawlView.vue'),
-    meta: { title: 'Manual Crawl' },
+    redirect: '/admin/crawl',
   },
   {
     path: '/database',
@@ -79,6 +77,12 @@ const routes: RouteRecordRaw[] = [
         name: 'crawl-status',
         component: () => import('@/views/CrawlStatusView.vue'),
         meta: { title: 'Crawl Status', adminTab: 'crawl-status' },
+      },
+      {
+        path: 'crawl',
+        name: 'admin-crawl',
+        component: () => import('@/views/CrawlView.vue'),
+        meta: { title: '手动爬取', adminTab: 'crawl' },
       },
       {
         path: 'scheduler',

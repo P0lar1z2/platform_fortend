@@ -15,6 +15,7 @@ interface AdminMenuItem {
 
 const menuItems: AdminMenuItem[] = [
   { path: '/admin/crawl-status', label: 'Crawl 状态', icon: 'DataLine' },
+  { path: '/admin/crawl', label: '手动爬取', icon: 'Search' },
   { path: '/admin/scheduler', label: '定时任务', icon: 'Timer' },
   { path: '/admin/matcher', label: 'Matcher', icon: 'Connection' },
   { path: '/admin/corvus', label: 'Corvus', icon: 'Cpu' },
