@@ -32,6 +32,8 @@ const formData = ref({
   brandSlug: '',
   platform: '',
   keyword: '',
+  pages: undefined as number | undefined,
+  maxItems: undefined as number | undefined,
   cronPreset: 'daily',
   cronHour: '00',
   cronMinute: '00',
@@ -57,9 +59,22 @@ const jobTypes = [
 const platforms = [
   { label: 'StarBuyer', value: 'starbuyer' },
   { label: 'EcoAuc', value: 'ecoauc' },
-  { label: 'Yahoo Auctions', value: 'yahoo_auctions' },
+  { label: 'Yahoo Auctions', value: 'yahoo' },
   { label: 'Rakuten', value: 'rakuten' },
 ]
+
+// 默认 pages（和 backend default_pages_for 保持一致）
+const DEFAULT_PAGES_BY_PLATFORM: Record<string, number> = {
+  yahoo: 1,
+  rakuten: 1,
+  starbuyer: 3,
+  ecoauc: 3,
+  chrono24: 2,
+}
+
+function platformDefaultPages(platform: string): number {
+  return DEFAULT_PAGES_BY_PLATFORM[platform] ?? 1
+}
 
 // Computed
 const cronExpression = computed(() => {
@@ -109,6 +124,8 @@ function openCreateDialog() {
     brandSlug: '',
     platform: '',
     keyword: '',
+    pages: undefined,
+    maxItems: undefined,
     cronPreset: 'daily',
     cronHour: '00',
     cronMinute: '00',
@@ -149,6 +166,8 @@ function openEditDialog(job: ScheduledJob) {
     brandSlug: job.config.brandSlug || '',
     platform: job.config.platform || '',
     keyword: job.config.keyword || '',
+    pages: job.config.pages,
+    maxItems: job.config.maxItems,
     cronPreset,
     cronHour,
     cronMinute,
@@ -160,7 +179,8 @@ function openEditDialog(job: ScheduledJob) {
 }
 
 async function handleSubmit() {
-  const { name, jobType, brandSlug, platform, keyword, enabled, runOnce } = formData.value
+  const { name, jobType, brandSlug, platform, keyword, pages, maxItems, enabled, runOnce } =
+    formData.value
 
   if (!name.trim()) {
     ElMessage.warning('请输入任务名称')
@@ -181,6 +201,8 @@ async function handleSubmit() {
     }
     config.platform = platform
     config.keyword = keyword.trim()
+    if (pages !== undefined && pages !== null) config.pages = pages
+    if (maxItems !== undefined && maxItems !== null) config.max_items = maxItems
   }
 
   try {
@@ -480,6 +502,28 @@ onMounted(async () => {
               placeholder="输入搜索关键词"
             />
           </el-form-item>
+          <el-form-item label="每次页数">
+            <el-input-number
+              v-model="formData.pages"
+              :min="1"
+              :max="10"
+              controls-position="right"
+              :placeholder="`留空 = 平台默认${formData.platform ? `（${platformDefaultPages(formData.platform)} 页）` : ''}`"
+              style="width: 220px"
+            />
+            <span class="form-hint">留空按平台默认</span>
+          </el-form-item>
+          <el-form-item label="item 上限">
+            <el-input-number
+              v-model="formData.maxItems"
+              :min="1"
+              :max="10000"
+              controls-position="right"
+              placeholder="留空不限制"
+              style="width: 220px"
+            />
+            <span class="form-hint">每次任务最多处理多少条 item（保护爬虫不爆量）</span>
+          </el-form-item>
         </template>
 
         <el-form-item label="执行周期" required>
@@ -580,6 +624,22 @@ onMounted(async () => {
             {{ formatDate(row.completedAt) }}
           </template>
         </el-table-column>
+        <el-table-column label="结果" width="200">
+          <template #default="{ row }">
+            <span v-if="row.itemsFound !== undefined || row.itemsNew !== undefined">
+              found=<strong>{{ row.itemsFound ?? 0 }}</strong>
+              /
+              new=<strong :style="{ color: (row.itemsNew ?? 0) > 0 ? 'var(--el-color-success)' : undefined }">
+                {{ row.itemsNew ?? 0 }}
+              </strong>
+              <span v-if="(row.errors ?? 0) > 0">
+                / err=<strong style="color: var(--el-color-danger)">{{ row.errors }}</strong>
+              </span>
+              <span v-if="row.elapsedMs" class="elapsed"> ({{ row.elapsedMs }}ms)</span>
+            </span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="错误" min-width="200">
           <template #default="{ row }">
             <el-text v-if="row.error" type="danger" truncated>
@@ -610,6 +670,12 @@ onMounted(async () => {
     margin-left: 12px;
     color: #909399;
     font-size: 12px;
+  }
+
+  .elapsed {
+    color: #909399;
+    font-size: 12px;
+    margin-left: 4px;
   }
 }
 </style>

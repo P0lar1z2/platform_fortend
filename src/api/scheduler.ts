@@ -5,6 +5,8 @@ export interface JobConfig {
   brandSlug?: string
   platform?: string
   keyword?: string
+  pages?: number
+  maxItems?: number
 }
 
 export interface ScheduledJob {
@@ -30,6 +32,10 @@ export interface JobExecution {
   status: string
   error?: string
   result?: string
+  itemsFound?: number
+  itemsNew?: number
+  errors?: number
+  elapsedMs?: number
 }
 
 export interface CreateJobRequest {
@@ -40,6 +46,8 @@ export interface CreateJobRequest {
     brand_slug?: string
     platform?: string
     keyword?: string
+    pages?: number
+    max_items?: number
   }
   enabled?: boolean
   run_once?: boolean
@@ -52,6 +60,8 @@ export interface UpdateJobRequest {
     brand_slug?: string
     platform?: string
     keyword?: string
+    pages?: number
+    max_items?: number
   }
   enabled?: boolean
   run_once?: boolean
@@ -75,6 +85,8 @@ export async function listJobs(): Promise<ScheduledJob[]> {
       brandSlug: j.config?.brand_slug ?? j.config?.brandSlug,
       platform: j.config?.platform,
       keyword: j.config?.keyword,
+      pages: j.config?.pages,
+      maxItems: j.config?.max_items ?? j.config?.maxItems,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -103,6 +115,8 @@ export async function getJob(jobId: string): Promise<ScheduledJob> {
       brandSlug: j.config?.brand_slug ?? j.config?.brandSlug,
       platform: j.config?.platform,
       keyword: j.config?.keyword,
+      pages: j.config?.pages,
+      maxItems: j.config?.max_items ?? j.config?.maxItems,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -132,6 +146,8 @@ export async function createJob(job: CreateJobRequest): Promise<ScheduledJob> {
       brandSlug: j.config?.brand_slug ?? j.config?.brandSlug,
       platform: j.config?.platform,
       keyword: j.config?.keyword,
+      pages: j.config?.pages,
+      maxItems: j.config?.max_items ?? j.config?.maxItems,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -164,6 +180,8 @@ export async function updateJob(
       brandSlug: j.config?.brand_slug ?? j.config?.brandSlug,
       platform: j.config?.platform,
       keyword: j.config?.keyword,
+      pages: j.config?.pages,
+      maxItems: j.config?.max_items ?? j.config?.maxItems,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -221,5 +239,9 @@ export async function getJobHistory(
     status: e.status,
     error: e.error,
     result: e.result,
+    itemsFound: e.items_found ?? e.itemsFound,
+    itemsNew: e.items_new ?? e.itemsNew,
+    errors: e.errors,
+    elapsedMs: e.elapsed_ms ?? e.elapsedMs,
   }))
 }
