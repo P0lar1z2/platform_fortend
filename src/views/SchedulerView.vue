@@ -53,7 +53,8 @@ const cronPresets = [
 
 const jobTypes = [
   { label: 'WatchBase 爬取', value: 'watchbase_scrape' },
-  { label: '平台搜索', value: 'platform_search' },
+  { label: '平台搜索（在售 listing）', value: 'platform_search' },
+  { label: '交易记录抓取（auction history → transactions）', value: 'transaction_ingest' },
 ]
 
 const platforms = [
@@ -61,6 +62,12 @@ const platforms = [
   { label: 'EcoAuc', value: 'ecoauc' },
   { label: 'Yahoo Auctions', value: 'yahoo' },
   { label: 'Rakuten', value: 'rakuten' },
+]
+
+// transaction_ingest 仅支持有 MarketPriceItem 形态的源
+const transactionPlatforms = [
+  { label: 'StarBuyer', value: 'starbuyer' },
+  { label: 'EcoAuc', value: 'ecoauc' },
 ]
 
 // 默认 pages（和 backend default_pages_for 保持一致）
@@ -201,6 +208,14 @@ async function handleSubmit() {
     }
     config.platform = platform
     config.keyword = keyword.trim()
+    if (pages !== undefined && pages !== null) config.pages = pages
+    if (maxItems !== undefined && maxItems !== null) config.max_items = maxItems
+  } else if (jobType === 'transaction_ingest') {
+    if (!platform || !['starbuyer', 'ecoauc'].includes(platform)) {
+      ElMessage.warning('交易记录抓取仅支持 StarBuyer / EcoAuc')
+      return
+    }
+    config.platform = platform
     if (pages !== undefined && pages !== null) config.pages = pages
     if (maxItems !== undefined && maxItems !== null) config.max_items = maxItems
   }
@@ -372,13 +387,18 @@ onMounted(async () => {
             </template>
           </el-table-column>
 
-          <el-table-column label="配置" min-width="160">
+          <el-table-column label="配置" min-width="180">
             <template #default="{ row }">
               <span v-if="row.jobType === 'watchbase_scrape'">
                 品牌: {{ row.config.brandSlug === '__all__' ? '所有品牌' : (row.config.brandSlug || '-') }}
               </span>
               <span v-else-if="row.jobType === 'platform_search'">
                 {{ row.config.platform }}: {{ row.config.keyword }}
+              </span>
+              <span v-else-if="row.jobType === 'transaction_ingest'">
+                {{ row.config.platform }}
+                <span v-if="row.config.pages">· {{ row.config.pages }} 页</span>
+                <span v-if="row.config.maxItems">· ≤{{ row.config.maxItems }}</span>
               </span>
             </template>
           </el-table-column>
@@ -479,6 +499,46 @@ onMounted(async () => {
             />
           </el-select>
         </el-form-item>
+
+        <!-- Transaction ingest config -->
+        <template v-if="formData.jobType === 'transaction_ingest'">
+          <el-form-item label="平台" required>
+            <el-select
+              v-model="formData.platform"
+              placeholder="选择平台（StarBuyer / EcoAuc）"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="p in transactionPlatforms"
+                :key="p.value"
+                :label="p.label"
+                :value="p.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="每次页数">
+            <el-input-number
+              v-model="formData.pages"
+              :min="1"
+              :max="20"
+              controls-position="right"
+              :placeholder="`留空 = 平台默认${formData.platform ? `（${platformDefaultPages(formData.platform)} 页）` : ''}`"
+              style="width: 220px"
+            />
+            <span class="form-hint">每次任务翻多少页 MarketPrice 历史</span>
+          </el-form-item>
+          <el-form-item label="item 上限">
+            <el-input-number
+              v-model="formData.maxItems"
+              :min="1"
+              :max="10000"
+              controls-position="right"
+              placeholder="留空不限制"
+              style="width: 220px"
+            />
+            <span class="form-hint">单次任务处理的 transaction 上限</span>
+          </el-form-item>
+        </template>
 
         <!-- Platform search config -->
         <template v-if="formData.jobType === 'platform_search'">
