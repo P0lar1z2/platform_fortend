@@ -1,166 +1,193 @@
-<template>
-  <div class="admin-shell">
-    <header class="admin-header">
-      <div class="admin-header__left">
-        <el-icon class="admin-logo" size="20"><Tools /></el-icon>
-        <span class="admin-title">Watch Pipeline · Admin</span>
-        <el-tag size="small" type="warning" effect="plain">运维面板</el-tag>
-      </div>
-      <div class="admin-header__right">
-        <el-tooltip content="打开调度器" placement="bottom">
-          <el-button size="small" link @click="$router.push('/admin/scheduler')">
-            <el-icon><Timer /></el-icon>
-          </el-button>
-        </el-tooltip>
-        <el-button size="small" @click="goToUserApp">
-          <el-icon><SwitchButton /></el-icon>
-          <span>退出到用户界面</span>
-        </el-button>
-      </div>
-    </header>
-
-    <el-tabs
-      v-model="activeTab"
-      type="card"
-      class="admin-tabs"
-      @tab-change="handleTabChange"
-    >
-      <el-tab-pane
-        v-for="tab in tabs"
-        :key="tab.name"
-        :label="tab.label"
-        :name="tab.name"
-      />
-    </el-tabs>
-
-    <main class="admin-body">
-      <router-view v-slot="{ Component }">
-        <keep-alive>
-          <component :is="Component" />
-        </keep-alive>
-      </router-view>
-    </main>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAppStore } from '@/stores'
 
 const route = useRoute()
 const router = useRouter()
+const appStore = useAppStore()
 
-interface AdminTab {
-  name: string
-  label: string
+interface AdminMenuItem {
   path: string
+  label: string
+  icon: string
 }
 
-const tabs: AdminTab[] = [
-  { name: 'crawl-status', label: 'Crawl 状态', path: '/admin/crawl-status' },
-  { name: 'scheduler', label: '定时任务', path: '/admin/scheduler' },
-  { name: 'matcher', label: 'Matcher', path: '/admin/matcher' },
-  { name: 'corvus', label: 'Corvus', path: '/admin/corvus' },
-  { name: 'usage', label: '用量', path: '/admin/usage' },
+const menuItems: AdminMenuItem[] = [
+  { path: '/admin/crawl-status', label: 'Crawl 状态', icon: 'DataLine' },
+  { path: '/admin/scheduler', label: '定时任务', icon: 'Timer' },
+  { path: '/admin/matcher', label: 'Matcher', icon: 'Connection' },
+  { path: '/admin/corvus', label: 'Corvus', icon: 'Cpu' },
+  { path: '/admin/usage', label: '用量', icon: 'PieChart' },
 ]
 
-const activeTab = computed({
-  get: () => (route.meta?.adminTab as string) || 'crawl-status',
-  set: () => {},
+const activeMenu = computed(() => {
+  const found = menuItems.find((m) => route.path.startsWith(m.path))
+  return found?.path ?? '/admin/crawl-status'
 })
 
-function handleTabChange(name: string | number) {
-  const target = tabs.find((t) => t.name === name)
-  if (target && route.path !== target.path) {
-    router.push(target.path)
-  }
+function handleMenuSelect(index: string) {
+  router.push(index)
 }
 
-function goToUserApp() {
-  router.push('/')
-}
+const statusType = computed(() => {
+  switch (appStore.backendStatus) {
+    case 'online':
+      return 'success'
+    case 'offline':
+      return 'danger'
+    default:
+      return 'info'
+  }
+})
+
+const statusText = computed(() => {
+  switch (appStore.backendStatus) {
+    case 'online':
+      return 'Backend Online'
+    case 'offline':
+      return 'Backend Offline'
+    default:
+      return 'Checking...'
+  }
+})
 </script>
 
+<template>
+  <el-container class="admin-container">
+    <el-aside :width="appStore.sidebarCollapsed ? '64px' : '220px'" class="admin-sidebar">
+      <div class="logo">
+        <el-icon size="24"><Tools /></el-icon>
+        <span v-if="!appStore.sidebarCollapsed" class="logo-text">Admin</span>
+      </div>
+      <el-menu
+        :default-active="activeMenu"
+        :collapse="appStore.sidebarCollapsed"
+        class="sidebar-menu"
+        @select="handleMenuSelect"
+      >
+        <el-menu-item v-for="item in menuItems" :key="item.path" :index="item.path">
+          <el-icon><component :is="item.icon" /></el-icon>
+          <template #title>{{ item.label }}</template>
+        </el-menu-item>
+      </el-menu>
+    </el-aside>
+
+    <el-container direction="vertical">
+      <el-header class="admin-header">
+        <div class="header-left">
+          <el-button
+            :icon="appStore.sidebarCollapsed ? 'Expand' : 'Fold'"
+            text
+            @click="appStore.toggleSidebar"
+          />
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item :to="{ path: '/admin' }">Admin</el-breadcrumb-item>
+            <el-breadcrumb-item>{{ route.meta.title }}</el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
+        <div class="header-right">
+          <el-tag :type="statusType" size="small" class="status-tag">
+            <el-icon class="status-icon"><Connection /></el-icon>
+            <span>{{ statusText }}</span>
+          </el-tag>
+          <el-button size="small" @click="router.push('/')">
+            <el-icon><SwitchButton /></el-icon>
+            <span>退出到用户界面</span>
+          </el-button>
+        </div>
+      </el-header>
+
+      <el-main class="admin-main">
+        <router-view />
+      </el-main>
+    </el-container>
+  </el-container>
+</template>
+
 <style scoped lang="scss">
-.admin-shell {
+.admin-container {
+  height: 100%;
+}
+
+.admin-sidebar {
+  background-color: var(--wp-sidebar-bg);
+  transition: width 0.3s;
+  overflow-x: hidden;
+}
+
+.logo {
+  height: 60px;
   display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #0f172a; // 深色背景，视觉上和 user 界面区分
-  color: #f1f5f9;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--wp-sidebar-text-active);
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo-text {
+  white-space: nowrap;
+}
+
+.sidebar-menu {
+  border-right: none;
+  background-color: var(--wp-sidebar-bg);
+
+  :deep(.el-menu-item) {
+    color: var(--wp-sidebar-text);
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: var(--wp-sidebar-active-bg);
+    }
+
+    &.is-active {
+      color: var(--wp-sidebar-text-active);
+      background-color: var(--wp-sidebar-active-bg);
+      border-left-color: var(--el-color-primary);
+    }
+  }
 }
 
 .admin-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
+  background-color: #fff;
+  border-bottom: 1px solid var(--wp-header-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   padding: 0 20px;
-  background: linear-gradient(135deg, #1e293b, #0f172a);
-  border-bottom: 1px solid #334155;
-  flex-shrink: 0;
+  height: 60px;
+}
 
-  &__left {
-    display: flex;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-tag {
+  :deep(.el-tag__content) {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-  }
-
-  &__right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    gap: 4px;
+    white-space: nowrap;
   }
 }
 
-.admin-logo {
-  color: var(--el-color-warning);
-}
-
-.admin-title {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.admin-tabs {
-  flex-shrink: 0;
-  padding: 12px 20px 0;
-  background-color: #1e293b;
-
-  :deep(.el-tabs__header) {
-    margin-bottom: 0;
-    border-bottom: 1px solid #334155;
-  }
-
-  :deep(.el-tabs__nav) {
-    border: none;
-  }
-
-  :deep(.el-tabs__item) {
-    border: 1px solid transparent;
-    color: #94a3b8;
-    background-color: transparent;
-
-    &.is-active {
-      color: #f1f5f9;
-      background-color: #0f172a;
-      border-color: #334155;
-      border-bottom-color: #0f172a;
-    }
-
-    &:hover:not(.is-active) {
-      color: #cbd5e1;
-    }
-  }
-}
-
-.admin-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
+.admin-main {
+  background-color: var(--wp-content-bg);
   padding: 20px;
-  background-color: #f1f5f9; // 内容区保持亮色，让现有 el-card / el-table 不用重新改色
-  color: #1e293b;
+  overflow-y: auto;
 }
 </style>
