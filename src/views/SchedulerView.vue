@@ -34,6 +34,8 @@ const formData = ref({
   keyword: '',
   pages: undefined as number | undefined,
   maxItems: undefined as number | undefined,
+  startDate: '' as string,
+  endDate: '' as string,
   cronPreset: 'daily',
   cronHour: '00',
   cronMinute: '00',
@@ -55,6 +57,7 @@ const jobTypes = [
   { label: 'WatchBase 爬取', value: 'watchbase_scrape' },
   { label: '平台搜索（在售 listing）', value: 'platform_search' },
   { label: '交易记录抓取（auction history → transactions）', value: 'transaction_ingest' },
+  { label: 'StarBuyer 全量历史回灌（按月分片 + 详情）', value: 'starbuyer_full_scrape' },
 ]
 
 const platforms = [
@@ -133,6 +136,8 @@ function openCreateDialog() {
     keyword: '',
     pages: undefined,
     maxItems: undefined,
+    startDate: '',
+    endDate: '',
     cronPreset: 'daily',
     cronHour: '00',
     cronMinute: '00',
@@ -175,6 +180,8 @@ function openEditDialog(job: ScheduledJob) {
     keyword: job.config.keyword || '',
     pages: job.config.pages,
     maxItems: job.config.maxItems,
+    startDate: job.config.startDate || '',
+    endDate: job.config.endDate || '',
     cronPreset,
     cronHour,
     cronMinute,
@@ -186,7 +193,7 @@ function openEditDialog(job: ScheduledJob) {
 }
 
 async function handleSubmit() {
-  const { name, jobType, brandSlug, platform, keyword, pages, maxItems, enabled, runOnce } =
+  const { name, jobType, brandSlug, platform, keyword, pages, maxItems, startDate, endDate, enabled, runOnce } =
     formData.value
 
   if (!name.trim()) {
@@ -218,6 +225,9 @@ async function handleSubmit() {
     config.platform = platform
     if (pages !== undefined && pages !== null) config.pages = pages
     if (maxItems !== undefined && maxItems !== null) config.max_items = maxItems
+  } else if (jobType === 'starbuyer_full_scrape') {
+    if (startDate) config.start_date = startDate
+    if (endDate) config.end_date = endDate
   }
 
   try {
@@ -399,6 +409,9 @@ onMounted(async () => {
                 {{ row.config.platform }}
                 <span v-if="row.config.pages">· {{ row.config.pages }} 页</span>
                 <span v-if="row.config.maxItems">· ≤{{ row.config.maxItems }}</span>
+              </span>
+              <span v-else-if="row.jobType === 'starbuyer_full_scrape'">
+                {{ row.config.startDate || '2020-01-01' }} → {{ row.config.endDate || '今天' }}
               </span>
             </template>
           </el-table-column>
@@ -583,6 +596,42 @@ onMounted(async () => {
               style="width: 220px"
             />
             <span class="form-hint">每次任务最多处理多少条 item（保护爬虫不爆量）</span>
+          </el-form-item>
+        </template>
+
+        <!-- StarBuyer full scrape config -->
+        <template v-if="formData.jobType === 'starbuyer_full_scrape'">
+          <el-form-item label="开始日期">
+            <el-date-picker
+              v-model="formData.startDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="留空 = 2020-01-01"
+              style="width: 220px"
+            />
+            <span class="form-hint">按月分片爬取的起始月</span>
+          </el-form-item>
+          <el-form-item label="结束日期">
+            <el-date-picker
+              v-model="formData.endDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="留空 = 今天"
+              style="width: 220px"
+            />
+            <span class="form-hint">截止月（含）</span>
+          </el-form-item>
+          <el-form-item>
+            <el-alert
+              type="info"
+              :closable="false"
+              show-icon
+            >
+              <template #default>
+                <div>一次性历史回灌任务：复用 grpc_server 已登录 sessions（3 路并发），每月翻页爬 listing → 调详情页合并 → 落 starbuyer_market_prices + starbuyer_item_details。</div>
+                <div>建议同时打开「一次性任务」开关，避免按 cron 重复跑。</div>
+              </template>
+            </el-alert>
           </el-form-item>
         </template>
 

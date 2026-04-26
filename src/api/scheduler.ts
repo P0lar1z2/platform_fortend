@@ -7,6 +7,8 @@ export interface JobConfig {
   keyword?: string
   pages?: number
   maxItems?: number
+  startDate?: string
+  endDate?: string
 }
 
 export interface ScheduledJob {
@@ -48,6 +50,8 @@ export interface CreateJobRequest {
     keyword?: string
     pages?: number
     max_items?: number
+    start_date?: string
+    end_date?: string
   }
   enabled?: boolean
   run_once?: boolean
@@ -62,6 +66,8 @@ export interface UpdateJobRequest {
     keyword?: string
     pages?: number
     max_items?: number
+    start_date?: string
+    end_date?: string
   }
   enabled?: boolean
   run_once?: boolean
@@ -87,6 +93,8 @@ export async function listJobs(): Promise<ScheduledJob[]> {
       keyword: j.config?.keyword,
       pages: j.config?.pages,
       maxItems: j.config?.max_items ?? j.config?.maxItems,
+      startDate: j.config?.start_date ?? j.config?.startDate,
+      endDate: j.config?.end_date ?? j.config?.endDate,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -117,6 +125,8 @@ export async function getJob(jobId: string): Promise<ScheduledJob> {
       keyword: j.config?.keyword,
       pages: j.config?.pages,
       maxItems: j.config?.max_items ?? j.config?.maxItems,
+      startDate: j.config?.start_date ?? j.config?.startDate,
+      endDate: j.config?.end_date ?? j.config?.endDate,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -148,6 +158,8 @@ export async function createJob(job: CreateJobRequest): Promise<ScheduledJob> {
       keyword: j.config?.keyword,
       pages: j.config?.pages,
       maxItems: j.config?.max_items ?? j.config?.maxItems,
+      startDate: j.config?.start_date ?? j.config?.startDate,
+      endDate: j.config?.end_date ?? j.config?.endDate,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -182,6 +194,8 @@ export async function updateJob(
       keyword: j.config?.keyword,
       pages: j.config?.pages,
       maxItems: j.config?.max_items ?? j.config?.maxItems,
+      startDate: j.config?.start_date ?? j.config?.startDate,
+      endDate: j.config?.end_date ?? j.config?.endDate,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
