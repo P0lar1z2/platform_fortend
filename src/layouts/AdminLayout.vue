@@ -19,6 +19,7 @@ const menuItems: AdminMenuItem[] = [
   { path: '/admin/scheduler', label: '定时任务', icon: 'Timer' },
   { path: '/admin/database', label: '数据库', icon: 'Coin' },
   { path: '/admin/corvus', label: 'Corvus', icon: 'Cpu' },
+  { path: '/admin/trading', label: '交易策略', icon: 'TrendCharts' },
 ]
 
 const activeMenu = computed(() => {

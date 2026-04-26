@@ -112,6 +112,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/DatabaseBrowserView.vue'),
         meta: { title: '数据库', adminTab: 'database' },
       },
+      {
+        path: 'trading',
+        name: 'admin-trading',
+        component: () => import('@/views/TradingView.vue'),
+        meta: { title: '交易策略', adminTab: 'trading' },
+      },
     ],
   },
   {
