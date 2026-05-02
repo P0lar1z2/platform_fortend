@@ -9,6 +9,8 @@ export interface JobConfig {
   maxItems?: number
   startDate?: string
   endDate?: string
+  params?: string
+  maxPages?: number
 }
 
 export interface ScheduledJob {
@@ -52,6 +54,8 @@ export interface CreateJobRequest {
     max_items?: number
     start_date?: string
     end_date?: string
+    params?: string
+    max_pages?: number
   }
   enabled?: boolean
   run_once?: boolean
@@ -68,6 +72,8 @@ export interface UpdateJobRequest {
     max_items?: number
     start_date?: string
     end_date?: string
+    params?: string
+    max_pages?: number
   }
   enabled?: boolean
   run_once?: boolean
@@ -95,6 +101,8 @@ export async function listJobs(): Promise<ScheduledJob[]> {
       maxItems: j.config?.max_items ?? j.config?.maxItems,
       startDate: j.config?.start_date ?? j.config?.startDate,
       endDate: j.config?.end_date ?? j.config?.endDate,
+      params: j.config?.params,
+      maxPages: j.config?.max_pages ?? j.config?.maxPages,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -127,6 +135,8 @@ export async function getJob(jobId: string): Promise<ScheduledJob> {
       maxItems: j.config?.max_items ?? j.config?.maxItems,
       startDate: j.config?.start_date ?? j.config?.startDate,
       endDate: j.config?.end_date ?? j.config?.endDate,
+      params: j.config?.params,
+      maxPages: j.config?.max_pages ?? j.config?.maxPages,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -160,6 +170,8 @@ export async function createJob(job: CreateJobRequest): Promise<ScheduledJob> {
       maxItems: j.config?.max_items ?? j.config?.maxItems,
       startDate: j.config?.start_date ?? j.config?.startDate,
       endDate: j.config?.end_date ?? j.config?.endDate,
+      params: j.config?.params,
+      maxPages: j.config?.max_pages ?? j.config?.maxPages,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,
@@ -196,6 +208,8 @@ export async function updateJob(
       maxItems: j.config?.max_items ?? j.config?.maxItems,
       startDate: j.config?.start_date ?? j.config?.startDate,
       endDate: j.config?.end_date ?? j.config?.endDate,
+      params: j.config?.params,
+      maxPages: j.config?.max_pages ?? j.config?.maxPages,
     },
     enabled: j.enabled,
     runOnce: j.run_once ?? j.runOnce ?? false,

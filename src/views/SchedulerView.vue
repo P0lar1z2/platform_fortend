@@ -36,6 +36,8 @@ const formData = ref({
   maxItems: undefined as number | undefined,
   startDate: '' as string,
   endDate: '' as string,
+  params: '' as string,
+  maxPages: undefined as number | undefined,
   cronPreset: 'daily',
   cronHour: '00',
   cronMinute: '00',
@@ -57,7 +59,8 @@ const jobTypes = [
   { label: 'WatchBase 爬取', value: 'watchbase_scrape' },
   { label: '平台搜索（在售 listing）', value: 'platform_search' },
   { label: '交易记录抓取（auction history → transactions）', value: 'transaction_ingest' },
-  { label: 'StarBuyer 全量历史回灌（按月分片 + 详情）', value: 'starbuyer_full_scrape' },
+  { label: 'StarBuyer 全量历史回灌（按月分片 + 详情 → transactions）', value: 'starbuyer_full_scrape' },
+  { label: 'EcoAuc 全量历史回灌（market-prices 全表 → transactions）', value: 'ecoauc_full_scrape' },
 ]
 
 const platforms = [
@@ -138,6 +141,8 @@ function openCreateDialog() {
     maxItems: undefined,
     startDate: '',
     endDate: '',
+    params: '',
+    maxPages: undefined,
     cronPreset: 'daily',
     cronHour: '00',
     cronMinute: '00',
@@ -182,6 +187,8 @@ function openEditDialog(job: ScheduledJob) {
     maxItems: job.config.maxItems,
     startDate: job.config.startDate || '',
     endDate: job.config.endDate || '',
+    params: job.config.params || '',
+    maxPages: job.config.maxPages,
     cronPreset,
     cronHour,
     cronMinute,
@@ -193,7 +200,7 @@ function openEditDialog(job: ScheduledJob) {
 }
 
 async function handleSubmit() {
-  const { name, jobType, brandSlug, platform, keyword, pages, maxItems, startDate, endDate, enabled, runOnce } =
+  const { name, jobType, brandSlug, platform, keyword, pages, maxItems, startDate, endDate, params, maxPages, enabled, runOnce } =
     formData.value
 
   if (!name.trim()) {
@@ -228,6 +235,10 @@ async function handleSubmit() {
   } else if (jobType === 'starbuyer_full_scrape') {
     if (startDate) config.start_date = startDate
     if (endDate) config.end_date = endDate
+  } else if (jobType === 'ecoauc_full_scrape') {
+    if (params.trim()) config.params = params.trim()
+    if (maxPages !== undefined && maxPages !== null) config.max_pages = maxPages
+    if (maxItems !== undefined && maxItems !== null) config.max_items = maxItems
   }
 
   try {
@@ -412,6 +423,11 @@ onMounted(async () => {
               </span>
               <span v-else-if="row.jobType === 'starbuyer_full_scrape'">
                 {{ row.config.startDate || '2020-01-01' }} → {{ row.config.endDate || '今天' }}
+              </span>
+              <span v-else-if="row.jobType === 'ecoauc_full_scrape'">
+                {{ row.config.params ? '自定义 params' : '仅手表' }}
+                <span v-if="row.config.maxPages">· max {{ row.config.maxPages }} 页</span>
+                <span v-if="row.config.maxItems">· ≤{{ row.config.maxItems }}</span>
               </span>
             </template>
           </el-table-column>
@@ -628,8 +644,55 @@ onMounted(async () => {
               show-icon
             >
               <template #default>
-                <div>一次性历史回灌任务：复用 grpc_server 已登录 sessions（3 路并发），每月翻页爬 listing → 调详情页合并 → 落 starbuyer_market_prices + starbuyer_item_details。</div>
+                <div>一次性历史回灌任务：复用 grpc_server 已登录 sessions（3 路并发），每月翻页爬 listing → 调详情页合并 → 落 starbuyer_market_prices + starbuyer_item_details，并自动 XADD pipeline:tasks (kind=transaction) → transactions 集合。</div>
                 <div>建议同时打开「一次性任务」开关，避免按 cron 重复跑。</div>
+              </template>
+            </el-alert>
+          </el-form-item>
+        </template>
+
+        <!-- EcoAuc full scrape config -->
+        <template v-if="formData.jobType === 'ecoauc_full_scrape'">
+          <el-form-item label="搜索 params">
+            <el-input
+              v-model="formData.params"
+              type="textarea"
+              :autosize="{ minRows: 2, maxRows: 4 }"
+              placeholder="留空 = 仅手表 (master_item_categories[0]=1)"
+            />
+            <span class="form-hint">URL query 片段（不带前导 &），缺省跟旧 ecoauc_scraper bin 一致</span>
+          </el-form-item>
+          <el-form-item label="最大页数">
+            <el-input-number
+              v-model="formData.maxPages"
+              :min="1"
+              :max="10000"
+              controls-position="right"
+              placeholder="留空 = 2000"
+              style="width: 220px"
+            />
+            <span class="form-hint">安全帽：超过 max_pages 的页数会被跳过</span>
+          </el-form-item>
+          <el-form-item label="item 上限">
+            <el-input-number
+              v-model="formData.maxItems"
+              :min="1"
+              :max="1000000"
+              controls-position="right"
+              placeholder="留空不限制"
+              style="width: 220px"
+            />
+            <span class="form-hint">单次任务处理的 item 总上限</span>
+          </el-form-item>
+          <el-form-item>
+            <el-alert
+              type="info"
+              :closable="false"
+              show-icon
+            >
+              <template #default>
+                <div>一次性历史回灌任务：先抓第一页拿 total_items 计算 total_pages，再翻完整张表（受 max_pages 限制），落 ecoauc_items，并对每条 item XADD pipeline:tasks (kind=transaction) → transactions 集合。</div>
+                <div>默认 params 跟旧 ecoauc_scraper bin 一致，仅爬手表类目。建议打开「一次性任务」。</div>
               </template>
             </el-alert>
           </el-form-item>
