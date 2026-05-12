@@ -18,11 +18,13 @@
  * ============================================================
  */
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Search, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
 import WatchlistToggle from "../components/WatchlistToggle";
+import { getBrand } from "../api/brands";
+import type { BrandDetail, WatchListItem } from "../api/types";
 
 // ─── MOCK DATA ───────────────────────────────────────────
 const BRAND = {
@@ -77,20 +79,29 @@ export default function BrandModels() {
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
 
-  // TODO: 接 GET /api/brands/:slug + /api/brands/:slug/watches?page=&family=
-  // 当前用 BRAND/WATCHES mock；slug 来自路由（可能为 undefined 表示总览，本期先 fallback 到 mock 品牌）
-  void slug;
+  const effectiveSlug = slug ?? "rolex";
 
-  const families = ["全部", ...Array.from(new Set(WATCHES.map(w => w.family)))];
+  // Phase 11.F.2 —— 品牌信息 + 表款列表由 GET /api/brands/:slug 拉
+  const [detail, setDetail] = useState<BrandDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = useMemo(() => {
-    if (familyFilter === "全部") return WATCHES;
-    return WATCHES.filter(w => w.family === familyFilter);
-  }, [familyFilter]);
+  useEffect(() => {
+    setLoading(true);
+    getBrand(effectiveSlug, {
+      family: familyFilter === "全部" ? undefined : familyFilter,
+      page: currentPage,
+      size: PER_PAGE,
+    })
+      .then(d => setDetail(d))
+      .catch(() => setDetail(null))
+      .finally(() => setLoading(false));
+  }, [effectiveSlug, familyFilter, currentPage]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const families = ["全部", ...(detail?.families ?? [])];
+  const pageData: WatchListItem[] = detail?.watches.items ?? [];
+  const total = detail?.watches.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(currentPage, totalPages);
-  const pageData = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const goPage = (p: number) => { setCurrentPage(Math.max(1, Math.min(p, totalPages))); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
@@ -179,21 +190,21 @@ export default function BrandModels() {
           <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
             {/* BRAND_LOGO_PLACEHOLDER: Replace with <img src={brand.logoUrl} height={36} /> */}
             <div style={{width:"48px",height:"48px",borderRadius:"12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{fontSize:"18px",fontWeight:600,color:"rgba(255,255,255,0.3)",fontFamily:bd}}>{BRAND.name.charAt(0)}</span>
+              <span style={{fontSize:"18px",fontWeight:600,color:"rgba(255,255,255,0.3)",fontFamily:bd}}>{(detail?.brand.name ?? effectiveSlug).charAt(0).toUpperCase()}</span>
             </div>
             <div>
-              <h1 style={{fontFamily:hd,fontStyle:"italic",fontSize:"32px",color:"#fff",letterSpacing:"-1px",lineHeight:1}}>{BRAND.name}</h1>
-              <span style={{fontSize:"13px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:"'Noto Sans SC',sans-serif"}}>{BRAND.nameCn}</span>
+              <h1 style={{fontFamily:hd,fontStyle:"italic",fontSize:"32px",color:"#fff",letterSpacing:"-1px",lineHeight:1}}>{detail?.brand.name ?? effectiveSlug}</h1>
+              {detail?.brand.nameCn && <span style={{fontSize:"13px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:"'Noto Sans SC',sans-serif"}}>{detail.brand.nameCn}</span>}
             </div>
           </div>
           <div style={{display:"flex",gap:"20px"}}>
             <div style={{textAlign:"center"}}>
-              <div style={{fontSize:"20px",fontWeight:600,color:"#fff",fontFamily:bd}}>{BRAND.totalModels}</div>
+              <div style={{fontSize:"20px",fontWeight:600,color:"#fff",fontFamily:bd}}>{detail?.brand.modelCount ?? "—"}</div>
               <div style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.35)",fontFamily:bd}}>型号</div>
             </div>
             <div style={{width:"1px",background:"rgba(255,255,255,0.08)"}}/>
             <div style={{textAlign:"center"}}>
-              <div style={{fontSize:"20px",fontWeight:600,color:"#fff",fontFamily:bd}}>{BRAND.totalTransactions.toLocaleString()}</div>
+              <div style={{fontSize:"20px",fontWeight:600,color:"#fff",fontFamily:bd}}>{detail?.brand.totalTransactions?.toLocaleString() ?? "—"}</div>
               <div style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.35)",fontFamily:bd}}>交易记录</div>
             </div>
           </div>
@@ -201,7 +212,7 @@ export default function BrandModels() {
 
         {/* ── Toolbar ── */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
-          <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>共 {filtered.length} 个型号</p>
+          <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{loading ? "加载中..." : `共 ${total} 个型号`}</p>
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
             <button className="mode-btn" onClick={()=>setShowFilters(!showFilters)} style={{background:showFilters?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)"}}>
               <SlidersHorizontal size={16} color={showFilters?"#fff":"rgba(255,255,255,0.5)"}/>
@@ -236,7 +247,7 @@ export default function BrandModels() {
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"}}>
             {pageData.map(w => {
               return (
-                <div key={w.id} className="gc watch-card"
+                <div key={w.ref} className="gc watch-card"
                      onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
                      style={{padding:0,display:"flex",flexDirection:"column"}}>
                   <div style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
@@ -256,14 +267,14 @@ export default function BrandModels() {
                     <p style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,marginBottom:"12px"}}>{w.name}</p>
                     {/* Tags */}
                     <div style={{display:"flex",flexWrap:"wrap",gap:"4px",marginBottom:"14px"}}>
-                      <span className="tag">{w.dialColor}</span>
-                      <span className="tag">{w.material.length>18?w.material.split(" ")[0]+" "+w.material.split(" ")[1]:w.material}</span>
+                      {w.dialColor && <span className="tag">{w.dialColor}</span>}
+                      {w.material && <span className="tag">{w.material.length>18?w.material.split(" ").slice(0,2).join(" "):w.material}</span>}
                     </div>
                     {/* Transaction count */}
                     <div style={{marginTop:"auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                       <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
                         <div style={{width:"6px",height:"6px",borderRadius:"50%",background:"#22c55e"}}/>
-                        <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.6)",fontFamily:bd}}>{w.transactions} 条交易记录</span>
+                        <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.6)",fontFamily:bd}}>{w.transactions ?? 0} 条交易记录</span>
                       </div>
                       <ArrowRight size={14} color="rgba(255,255,255,0.25)"/>
                     </div>
@@ -286,7 +297,7 @@ export default function BrandModels() {
             {/* Rows */}
             {pageData.map((w,i) => {
               return (
-                <div key={w.id} className="watch-row"
+                <div key={w.ref} className="watch-row"
                      onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
                      style={{display:"grid",gridTemplateColumns:"48px 1fr 100px 90px 150px 90px 36px 36px",padding:"10px 20px",gap:"12px",borderBottom:i<pageData.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail */}
@@ -300,11 +311,11 @@ export default function BrandModels() {
                     <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>{w.name}</span>
                   </div>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.45)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{w.family}</span>
-                  <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{w.dialColor}</span>
-                  <span style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{w.material}</span>
+                  <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{w.dialColor ?? "—"}</span>
+                  <span style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{w.material ?? "—"}</span>
                   <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
                     <div style={{width:"5px",height:"5px",borderRadius:"50%",background:"#22c55e",flexShrink:0}}/>
-                    <span style={{fontSize:"13px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>{w.transactions} 条</span>
+                    <span style={{fontSize:"13px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>{w.transactions ?? 0} 条</span>
                   </div>
                   <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name }} variant="icon" />
                   <div style={{display:"flex",justifyContent:"center"}}><ChevronRight size={15} color="rgba(255,255,255,0.2)"/></div>

@@ -23,9 +23,11 @@
  * ============================================================
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Clock, Search, ChevronRight, ChevronDown, Save, Plus, Info, Bookmark } from "lucide-react";
+import { fetchConfig, updateConfig as apiUpdateConfig } from "../api/config";
+import { useToast } from "../components/Toast";
 
 // ─── MOCK: Platform configs ──────────────────────────────
 // API: GET /api/config/platforms
@@ -120,29 +122,51 @@ function ConfigField({ label, value, onChange, suffix = "", prefix = "", placeho
 // ─── MAIN ────────────────────────────────────────────────
 export default function ConfigPage() {
   const navigate = useNavigate();
-  const [platforms, setPlatforms] = useState(INITIAL_PLATFORMS);
-  const [config, setConfig] = useState(INITIAL_CONFIG);
+  const toast = useToast();
+  const [platforms, setPlatforms] = useState<any[]>(INITIAL_PLATFORMS);
+  const [config, setConfig] = useState<Record<string, any>>(INITIAL_CONFIG);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
 
-  const updateConfig = (key, value) => {
+  // Phase 11.F.3 —— 加载远端 config 覆盖本地初始
+  useEffect(() => {
+    setLoading(true);
+    fetchConfig()
+      .then(doc => { setPlatforms(doc.sources); setConfig(doc.global); })
+      .catch(() => toast.push("配置加载失败，用本地默认", "warning"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const updateConfig = (key: string, value: any) => {
     setConfig(prev => ({ ...prev, [key]: value }));
     setSaved(false);
   };
 
-  const updatePlatform = (idx, field, value) => {
+  const updatePlatform = (idx: number, field: string, value: any) => {
     setPlatforms(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
     setSaved(false);
   };
 
-  const handleSave = () => {
-    // API: PUT /api/config + PUT /api/config/platforms
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await apiUpdateConfig({ sources: platforms, global: config });
+      setSaved(true);
+      toast.push("配置已保存", "success");
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      toast.push("保存失败，请重试", "error");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  void loading; void saving;
 
   const SOURCE_COLORS = { starbuyer: "#34d399", ecoauc: "#60a5fa", yahoo: "#fbbf24", rakuten: "#f472b6", ebay: "#a78bfa" };
 

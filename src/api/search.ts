@@ -18,15 +18,30 @@ export async function searchWatches(params: SearchParams): Promise<PageEnvelope<
 
 function MOCK_SEARCH(p: SearchParams): PageEnvelope<WatchListItem> {
   const size = p.size ?? 12;
+  const colors = ["Black", "Blue", "White", "Green", "Silver", "Grey"];
+  const materials = ["Oystersteel", "Stainless Steel", "Stainless Steel / White Gold", "Everose Gold", "Titanium"];
+  const families = ["Submariner", "GMT-Master II", "Daytona", "Datejust", "Nautilus", "Speedmaster"];
+  const brandPool = [
+    { name: "Rolex", slug: "rolex" },
+    { name: "Omega", slug: "omega" },
+    { name: "Audemars Piguet", slug: "audemars-piguet" },
+    { name: "Patek Philippe", slug: "patek-philippe" },
+  ];
   return {
-    items: Array.from({ length: size }, (_, i) => ({
-      ref: `MOCK-${1000 + i}`,
-      brand: ["Rolex", "Omega", "AP", "PP"][i % 4],
-      brandSlug: ["rolex", "omega", "ap", "pp"][i % 4],
-      family: "Submariner",
-      name: `Mock model #${i + 1}`,
-      transactions: 120 + i * 7,
-    })),
+    items: Array.from({ length: size }, (_, i) => {
+      const b = brandPool[i % brandPool.length];
+      return {
+        ref: `MOCK-${1000 + (p.page ?? 1) * 100 + i}`,
+        brand: b.name,
+        brandSlug: b.slug,
+        family: families[i % families.length],
+        name: `${b.name} ${families[i % families.length]} ${i + 1}`,
+        dialColor: colors[i % colors.length],
+        material: materials[i % materials.length],
+        transactions: 120 + i * 7,
+        thumbUrl: null,
+      };
+    }),
     total: 247,
     page: p.page ?? 1,
     size,

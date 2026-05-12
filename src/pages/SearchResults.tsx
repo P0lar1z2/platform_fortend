@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark } from "lucide-react";
 import { useSearchHistory } from "../hooks/useSearchHistory";
@@ -6,6 +6,8 @@ import { useViewPreference } from "../hooks/useViewPreference";
 import { useWatchlist } from "../hooks/useWatchlist";
 import WatchlistToggle from "../components/WatchlistToggle";
 import { WATCHLIST_CAPACITY } from "../lib/constants";
+import { searchWatches } from "../api/search";
+import type { WatchListItem } from "../api/types";
 
 // ─── MOCK DATA (24 watches) ─────────────────────────────
 const WATCHES = [
@@ -103,26 +105,29 @@ export default function SearchResults() {
     updateParams({ q: term, page: 1 });
   }
 
-  const brands = ["全部", ...Array.from(new Set(WATCHES.map(w => w.brand)))];
+  // Phase 11.F.2 —— 列表数据从 GET /api/search 拉，分页 + 品牌过滤都由后端处理
+  const [pageData, setPageData] = useState<WatchListItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = useMemo(() => {
-    let result = WATCHES;
-    if (urlBrand !== "全部") result = result.filter(w => w.brand === urlBrand);
-    if (urlQ.trim()) {
-      const q = urlQ.toLowerCase();
-      result = result.filter(w =>
-        w.name.toLowerCase().includes(q) ||
-        w.brand.toLowerCase().includes(q) ||
-        w.ref.toLowerCase().includes(q) ||
-        w.family.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [urlBrand, urlQ]);
+  useEffect(() => {
+    setLoading(true);
+    searchWatches({
+      q: urlQ || undefined,
+      brand: urlBrand === "全部" ? undefined : urlBrand,
+      page: urlPage,
+      size: PER_PAGE,
+    })
+      .then(r => { setPageData(r.items); setTotal(r.total); })
+      .catch(() => { setPageData([]); setTotal(0); })
+      .finally(() => setLoading(false));
+  }, [urlQ, urlBrand, urlPage]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  // 品牌过滤候选：服务端没单独 endpoint 时用 mock 列表 (Phase 11.F.2 后续可换 listBrands)
+  const brands = ["全部", "Rolex", "Omega", "Patek Philippe", "Audemars Piguet", "Cartier", "IWC", "Tudor", "Grand Seiko"];
+
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(urlPage, totalPages);
-  const pageData = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const heading = "'Instrument Serif','Noto Serif SC',serif";
   const body = "'Barlow','Noto Sans SC',sans-serif";
@@ -401,7 +406,7 @@ export default function SearchResults() {
               {searchValue ? `"${searchValue}" 的搜索结果` : "全部表款"}
             </h1>
             <p style={{ fontSize: "13px", fontWeight: 300, color: "rgba(255,255,255,0.4)", fontFamily: body }}>
-              共找到 {filtered.length} 个型号
+              {loading ? "加载中..." : `共找到 ${total} 个型号`}
             </p>
           </div>
 
@@ -457,7 +462,7 @@ export default function SearchResults() {
             gap: "16px",
           }}>
             {pageData.map((w) => (
-              <div key={w.id} className="gc watch-card"
+              <div key={w.ref} className="gc watch-card"
                    onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
                    style={{ padding: 0, display: "flex", flexDirection: "column", cursor: "pointer" }}>
                 {/* Image */}
@@ -467,7 +472,7 @@ export default function SearchResults() {
                   borderBottom: "1px solid rgba(255,255,255,0.06)",
                   overflow: "hidden",
                 }}>
-                  <WatchImage src={w.image} alt={w.name} size={160} />
+                  <WatchImage src={w.thumbUrl} alt={w.name} size={160} />
                 </div>
 
                 {/* Info */}
@@ -486,7 +491,7 @@ export default function SearchResults() {
                       fontFamily: body, lineHeight: 1.3, letterSpacing: "0.3px",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
                     }}>Ref. {w.ref}</h3>
-                    <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.image }} variant="icon" />
+                    <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.thumbUrl }} variant="icon" />
 
                   </div>
 
@@ -497,8 +502,8 @@ export default function SearchResults() {
 
                   {/* Tags */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "14px" }}>
-                    <span className="tag">{w.dialColor}</span>
-                    <span className="tag">{w.material.length > 18 ? w.material.split(" ")[0] + " " + w.material.split(" ")[1] : w.material}</span>
+                    {w.dialColor && <span className="tag">{w.dialColor}</span>}
+                    {w.material && <span className="tag">{w.material.length > 18 ? w.material.split(" ").slice(0,2).join(" ") : w.material}</span>}
                   </div>
 
                   {/* Transaction count — bottom */}
@@ -509,7 +514,7 @@ export default function SearchResults() {
                         background: "#22c55e",
                       }} />
                       <span style={{ fontSize: "12px", fontWeight: 400, color: "rgba(255,255,255,0.6)", fontFamily: body }}>
-                        {w.listings} 条交易记录
+                        {w.transactions ?? 0} 条交易记录
                       </span>
                     </div>
                     <ArrowRight size={14} color="rgba(255,255,255,0.25)" />
@@ -542,7 +547,7 @@ export default function SearchResults() {
 
             {/* Rows */}
             {pageData.map((w, i) => (
-              <div key={w.id} className="watch-row"
+              <div key={w.ref} className="watch-row"
                    onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
                    style={{
                      display: "grid",
@@ -560,7 +565,7 @@ export default function SearchResults() {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   overflow: "hidden", flexShrink: 0,
                 }}>
-                  <WatchImage src={w.image} alt={w.name} size={36} />
+                  <WatchImage src={w.thumbUrl} alt={w.name} size={36} />
                 </div>
 
                 {/* Ref + Brand + Name — single column, horizontal */}
@@ -607,10 +612,10 @@ export default function SearchResults() {
                 {/* Transaction count */}
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
-                  <span style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.7)", fontFamily: body }}>{w.listings} 条</span>
+                  <span style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.7)", fontFamily: body }}>{w.transactions ?? 0} 条</span>
                 </div>
 
-                <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.image }} variant="icon" />
+                <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.thumbUrl }} variant="icon" />
 
 
                 {/* Arrow */}
@@ -659,7 +664,7 @@ export default function SearchResults() {
         )}
 
         {/* ─── Empty state ─── */}
-        {filtered.length === 0 && (
+        {!loading && total === 0 && (
           <div style={{
             textAlign: "center", padding: "80px 20px",
           }}>
