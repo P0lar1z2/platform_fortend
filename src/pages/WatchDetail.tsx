@@ -17,29 +17,15 @@
  * ============================================================
  */
 
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Clock, ChevronRight, ChevronLeft, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, Search } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
 import { DATA_SOURCES as SHARED_DATA_SOURCES, DATA_SOURCE_BY_KEY } from "../lib/constants";
 import { decisionMeta, valuationLevelLabel } from "../lib/labels";
 import { fetchPriceRange, postValuation } from "../api/valuations";
-import { useEffect } from "react";
-import type { ValuationResponse } from "../api/types";
-
-/* ─── MOCK DATA ─────────────────────────────────────────── */
-
-// API: GET /api/watches/:ref
-const WATCH = {
-  ref: "126610LN", brand: "Rolex", brandSlug: "rolex",
-  family: "Submariner", name: "Submariner Date",
-  dialColor: "Black", material: "Oystersteel",
-  movement: "Automatic (Cal. 3235)", caseDiameter: "41mm",
-  waterResistance: "300m", crystal: "Sapphire",
-  bezel: "Ceramic (Cerachrom)", bracelet: "Oyster, Oystersteel",
-  powerReserve: "70 hours", produced: "2020–Present",
-  images: [null, null, null, null],
-};
+import { fetchWatch, fetchMarket } from "../api/watches";
+import type { ValuationResponse, WatchInfo, MarketResponse, Period } from "../api/types";
 
 // 数据源集中配置在 lib/constants.ts，新增源只改那里
 const DATA_SOURCES = SHARED_DATA_SOURCES;
@@ -48,55 +34,7 @@ const SOURCE_COLORS: Record<string, string> = Object.fromEntries(
 );
 void DATA_SOURCE_BY_KEY;
 
-const TIME_WINDOWS = ["1M", "3M", "6M", "1Y", "All"];
-const TIME_DAYS = { "1M": 30, "3M": 90, "6M": 180, "1Y": 365, "All": 99999 };
-
-// API: GET /api/watches/:ref/transactions?period=
-const CONDITIONS = ["A", "AB", "B", "BC"];
-function mockTransactions(n) {
-  return Array.from({ length: n }, (_, i) => {
-    const src = DATA_SOURCES[Math.floor(Math.random() * DATA_SOURCES.length)];
-    const d = new Date(Date.now() - Math.floor(Math.random() * 400) * 86400000);
-    return {
-      id: i, date: d.toISOString().slice(0, 10),
-      dateTime: d.toISOString().slice(0, 10) + " " + String(14).padStart(2, "0") + ":" + String(Math.floor(Math.random() * 60)).padStart(2, "0"),
-      source: src.key, sourceName: src.name,
-      price: Math.round(1000000 + Math.random() * 800000),
-      condition: CONDITIONS[Math.floor(Math.random() * 4)],
-      material: "SS", dialColor: "Black",
-      hasBox: Math.random() > 0.4, hasCard: Math.random() > 0.3,
-      ref: WATCH.ref, listingUrl: "#",
-    };
-  }).sort((a, b) => b.date.localeCompare(a.date));
-}
-const ALL_TX = mockTransactions(80);
-
-// API: GET /api/watches/:ref/price-history?period=
-function mockPriceHistory(days) {
-  const d = []; let pA = 1350000, pB = 1280000;
-  for (let i = days; i >= 0; i--) {
-    pA += (Math.random() - 0.48) * 20000; pB += (Math.random() - 0.48) * 18000;
-    pA = Math.max(1e6, Math.min(1.7e6, pA)); pB = Math.max(9.5e5, Math.min(1.65e6, pB));
-    d.push({ date: new Date(Date.now() - i * 86400000).toISOString().slice(0, 10), starbuyer: Math.round(pA), ecoauc: Math.round(pB) });
-  }
-  return d;
-}
-const PRICE_HIST = { "1M": mockPriceHistory(30), "3M": mockPriceHistory(90), "6M": mockPriceHistory(180), "1Y": mockPriceHistory(365), "All": mockPriceHistory(730) };
-
-/* ─── HELPERS ───────────────────────────────────────────── */
-
-function filterByTime(txs, tw) {
-  if (tw === "All") return txs;
-  const cut = new Date(Date.now() - TIME_DAYS[tw] * 86400000);
-  return txs.filter(t => new Date(t.date) >= cut);
-}
-
-function stats(txs) {
-  if (!txs.length) return { avg: 0, max: 0, min: 0, maxTx: null, minTx: null, count: 0 };
-  const ps = txs.map(t => t.price);
-  const mx = Math.max(...ps), mn = Math.min(...ps);
-  return { avg: Math.round(ps.reduce((a, b) => a + b, 0) / ps.length), max: mx, min: mn, maxTx: txs.find(t => t.price === mx), minTx: txs.find(t => t.price === mn), count: txs.length };
-}
+const TIME_WINDOWS: Period[] = ["1M", "3M", "6M", "1Y", "All"];
 
 /* ─── COMPONENTS ────────────────────────────────────────── */
 
@@ -147,13 +85,34 @@ function PriceChart({ data, visible }) {
 export default function WatchDetail() {
   const navigate = useNavigate();
   const { ref: routeRef } = useParams<{ ref: string }>();
-  // TODO: 接 GET /api/watches/:ref → 替换 WATCH mock
-  void routeRef;
   void navigate;
-  const [tw, setTw] = useState("3M");
+
+  // PDF 4.1/4.2: Section A 表款信息 + Section B 市场数据 走 API
+  const ref = routeRef ?? "126610LN";
+  const [watch, setWatch] = useState<WatchInfo | null>(null);
+  const [watchError, setWatchError] = useState<string | null>(null);
+  const [market, setMarket] = useState<MarketResponse | null>(null);
+  const [marketLoading, setMarketLoading] = useState(true);
+
+  const [tw, setTw] = useState<Period>("3M");
   const [vm, setVm] = useState("chart");
   const [visSrc, setVisSrc] = useState(DATA_SOURCES.map(s => s.key));
   const [txPg, setTxPg] = useState(1);
+
+  useEffect(() => {
+    setWatch(null); setWatchError(null);
+    fetchWatch(ref).then(setWatch).catch(err => {
+      setWatchError(err?.response?.status === 404 ? "未找到该型号" : "加载失败");
+    });
+  }, [ref]);
+
+  useEffect(() => {
+    setMarketLoading(true);
+    fetchMarket(ref, tw)
+      .then(m => { setMarket(m); setTxPg(1); })
+      .catch(() => setMarket(null))
+      .finally(() => setMarketLoading(false));
+  }, [ref, tw]);
 
   // ── Section C: Trading Valuation ──
   const [inputMode, setInputMode] = useState("price");    // "price" = input buy price, "margin" = input target margin
@@ -173,17 +132,30 @@ export default function WatchDetail() {
   const [valuationLoading, setValuationLoading] = useState(false);
 
   useEffect(() => {
-    fetchPriceRange(WATCH.ref).then(setPriceRange).catch(() => setPriceRange(null));
-  }, []);
+    fetchPriceRange(ref).then(setPriceRange).catch(() => setPriceRange(null));
+  }, [ref]);
 
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
 
-  // All filtered by global time window
-  const fTx = useMemo(() => filterByTime(ALL_TX, tw), [tw]);
-  const oStats = useMemo(() => stats(fTx), [fTx]);
-  const srcStats = useMemo(() => DATA_SOURCES.map(s => ({ ...s, s: stats(fTx.filter(t => t.source === s.key)) })), [fTx]);
-  const pData = PRICE_HIST[tw];
+  // PDF 4.2 Section B 数据全部由 market 驱动（period 切换触发联动刷新）
+  const oStats: any = market?.overall ?? { avg: 0, max: 0, min: 0, count: 0 };
+  const srcStats = DATA_SOURCES.map(cfg => {
+    const ps = market?.perSource?.find(p => p.key === cfg.key);
+    return {
+      key: cfg.key,
+      name: cfg.name,
+      logoUrl: cfg.logoUrl,
+      logoWidth: cfg.logoWidth,
+      logoHeight: cfg.logoHeight,
+      s: {
+        avg: ps?.avg ?? 0, max: ps?.max ?? 0, min: ps?.min ?? 0, count: ps?.count ?? 0,
+        maxTx: ps?.maxTx, minTx: ps?.minTx,
+      },
+    };
+  });
+  const pData = market?.chart?.points ?? [];
+  const fTx = market?.transactions ?? [];
 
   const txPP = 10;
   const txTP = Math.max(1, Math.ceil(fTx.length / txPP));
@@ -262,36 +234,40 @@ export default function WatchDetail() {
 
             {/* Right — Identity info + specs */}
             <div style={{padding:"32px 36px",display:"flex",flexDirection:"column"}}>
-              {/* Ref Number — primary identifier, largest text */}
-              {/* API: basic.Reference */}
-              <h1 style={{fontFamily:hd,fontStyle:"italic",fontSize:"40px",color:"#fff",letterSpacing:"-1.5px",lineHeight:1,marginBottom:"10px"}}>Ref. {WATCH.ref}</h1>
+              {/* PDF 4.1 表款信息区 —— 全部由 GET /api/watches/:ref 驱动 */}
+              <h1 style={{fontFamily:hd,fontStyle:"italic",fontSize:"40px",color:"#fff",letterSpacing:"-1.5px",lineHeight:1,marginBottom:"10px"}}>Ref. {watch?.ref ?? ref}</h1>
 
-              {/* Brand link (after Ref) — clickable, jumps to /brands/{slug} */}
-              {/* API: basic.Brand → brandSlug for URL */}
               <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"6px"}}>
-                <Link to={`/brands/${WATCH.brandSlug}`} className="bl" style={{display:"inline-flex"}}>
-                  <span style={{fontSize:"13px",fontWeight:600,color:"rgba(255,255,255,0.7)",textTransform:"uppercase",letterSpacing:"1px",fontFamily:bd}}>{WATCH.brand}</span>
-                  <ArrowUpRight size={13} color="rgba(255,255,255,0.4)"/>
-                </Link>
+                {watch && (
+                  <Link to={`/brands/${watch.brandSlug}`} className="bl" style={{display:"inline-flex"}}>
+                    <span style={{fontSize:"13px",fontWeight:600,color:"rgba(255,255,255,0.7)",textTransform:"uppercase",letterSpacing:"1px",fontFamily:bd}}>{watch.brand}</span>
+                    <ArrowUpRight size={13} color="rgba(255,255,255,0.4)"/>
+                  </Link>
+                )}
               </div>
 
-              {/* Model Name — single field, API: basic.Name */}
-              <p style={{fontSize:"15px",fontWeight:300,color:"rgba(255,255,255,0.45)",fontFamily:bd,marginBottom:"24px"}}>{WATCH.name}</p>
+              <p style={{fontSize:"15px",fontWeight:300,color:"rgba(255,255,255,0.45)",fontFamily:bd,marginBottom:"24px"}}>{watch?.name ?? (watchError ? watchError : "加载中…")}</p>
 
-              {/* Specs table — API: map from watchbase fields */}
               <div style={{flex:1}}>
                 <div style={{fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"1.2px",marginBottom:"10px",fontFamily:bd}}>规格参数</div>
-                {[["机芯",WATCH.movement],["表径",WATCH.caseDiameter],["表壳材质",WATCH.material],["表圈",WATCH.bezel],["表镜",WATCH.crystal],["防水",WATCH.waterResistance],["动力储备",WATCH.powerReserve],["表带",WATCH.bracelet],["表盘颜色",WATCH.dialColor],["生产年份",WATCH.produced]].map(([l,v],i)=>(
-                  <div key={i} className="sr"><span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{l}</span><span style={{fontSize:"12px",fontWeight:500,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>{v}</span></div>
+                {/* PDF 4.1 缺字段显示 —，不要隐藏行 */}
+                {(watch?.fields ?? []).map((f, i) => (
+                  <div key={i} className="sr">
+                    <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{f.label}</span>
+                    <span style={{fontSize:"12px",fontWeight:500,color: f.value ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)",fontFamily:bd}}>{f.value ?? "—"}</span>
+                  </div>
+                ))}
+                {!watch && !watchError && [..."abcdef"].map(k => (
+                  <div key={k} className="sr"><span style={{height:14,width:50,background:"rgba(255,255,255,0.06)",borderRadius:4}}/><span style={{height:14,width:120,background:"rgba(255,255,255,0.06)",borderRadius:4}}/></div>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Action buttons — below the card, centered */}
+          {/* PDF 4.1 按钮 - 设置关注 + 设置交易预期 */}
           <div style={{display:"flex",gap:"10px",justifyContent:"center",marginTop:"20px"}}>
             <WatchlistToggle
-              entry={{ ref: WATCH.ref, brand: WATCH.brand, name: WATCH.name }}
+              entry={{ ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }}
               variant="wide"
             />
             <button className="gs cb" onClick={()=>document.getElementById('trading-section')?.scrollIntoView({behavior:'smooth'})} style={{padding:"11px 20px",fontSize:"13px",fontWeight:500,color:"#fff",cursor:"pointer",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"9999px",background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:"6px",fontFamily:bd}}><Target size={14}/> 设置交易预期</button>
@@ -448,7 +424,7 @@ export default function WatchDetail() {
           <div style={{marginBottom:"28px"}}>
             <div className="gp" style={{display:"inline-flex",padding:"4px 14px",fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.6)",marginBottom:"14px",letterSpacing:"1px",fontFamily:bd}}>交易估值</div>
             <h2 style={{fontFamily:"'Noto Serif SC',serif",fontSize:"32px",color:"#fff",letterSpacing:"-1px",lineHeight:1.1,fontWeight:700}}>评估交易机会</h2>
-            <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",marginTop:"8px",fontFamily:bd}}>基于 Ref. {WATCH.ref} 的历史成交数据，评估不同交易路径与平台的利润空间。</p>
+            <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",marginTop:"8px",fontFamily:bd}}>基于 Ref. {ref} 的历史成交数据，评估不同交易路径与平台的利润空间。</p>
           </div>
 
           {/* ── Input Panel ── */}
@@ -570,7 +546,7 @@ export default function WatchDetail() {
                 setShowResults(true); setExpandedRoutes({}); setValuationLoading(true);
                 try {
                   const result = await postValuation({
-                    ref: WATCH.ref,
+                    ref,
                     mode: inputMode === "price" ? "price" : "margin",
                     value: inputMode === "price" ? Number(buyPrice || 0) : Number(targetMargin || 0),
                     source: valuationSource === "全部" ? "all" : (valuationSource as any),
@@ -751,7 +727,7 @@ export default function WatchDetail() {
               <Bell size={14} color="rgba(255,255,255,0.3)" style={{flexShrink:0}}/>
               <span style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.35)",fontFamily:bd}}>加入关注列表后，系统将每日监控各平台货源并通过飞书推送</span>
             </div>
-            <WatchlistToggle entry={{ ref: WATCH.ref, brand: WATCH.brand, name: WATCH.name }} variant="button" />
+            <WatchlistToggle entry={{ ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }} variant="button" />
           </div>
         </section>
       </main>
