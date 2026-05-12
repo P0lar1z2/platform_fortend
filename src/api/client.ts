@@ -11,12 +11,14 @@ export const apiClient = axios.create({
 apiClient.interceptors.response.use(
   r => r,
   err => {
-    // 401 → 跳登录页（Phase 12 接入）
+    // 401 → 跳登录页（保留 from=当前路径，登录后回到原页）
     if (err?.response?.status === 401 && typeof window !== "undefined") {
+      const url = err?.config?.url ?? "";
       const path = window.location.pathname;
-      if (path !== "/login" && path !== "/signup") {
-        // 暂不主动跳，先让调用方决定；登录页接入后开启:
-        // window.location.href = `/login?from=${encodeURIComponent(path)}`;
+      // /auth/me 探活时拿 401 是正常未登录信号，不要跳
+      const skipRedirect = url.endsWith("/auth/me") || path === "/login" || path === "/signup";
+      if (!skipRedirect) {
+        window.location.href = `/login?from=${encodeURIComponent(path + window.location.search)}`;
       }
     }
     return Promise.reject(err);

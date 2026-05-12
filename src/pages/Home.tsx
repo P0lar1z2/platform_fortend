@@ -318,13 +318,13 @@ export default function RaventikCN() {
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; }}
               >{item.label}</Link>
             ))}
-            <button className="cb" style={{
+            <Link to="/login" className="cb" style={{
               padding: "6px 16px", fontSize: "13px", fontWeight: 500,
               color: "#0a0a0a", background: "#fff", borderRadius: "9999px",
-              border: "none", cursor: "pointer",
+              textDecoration: "none",
               display: "flex", alignItems: "center", gap: "4px",
               fontFamily: body,
-            }}>登录 <ArrowUpRight size={13} /></button>
+            }}>登录 <ArrowUpRight size={13} /></Link>
           </div>
         </div>
       </nav>
