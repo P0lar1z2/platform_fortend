@@ -4,16 +4,16 @@ FROM docker.io/library/node:20-alpine AS builder
 WORKDIR /app
 
 # 复制依赖文件
-COPY package.json yarn.lock ./
+COPY package.json package-lock.json* ./
 
 # 安装依赖
-RUN yarn install --frozen-lockfile
+RUN npm ci || npm install
 
 # 复制源码
 COPY . .
 
 # 构建生产版本
-RUN yarn build
+RUN npm run build
 
 # 生产阶段 - Nginx
 FROM docker.io/library/nginx:alpine

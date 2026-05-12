@@ -36,3 +36,9 @@ coverage
 # Auto-generated
 src/auto-imports.d.ts
 src/components.d.ts
+
+# TS incremental build cache
+*.tsbuildinfo
+
+# 设计稿（PDF / mock jsx）保留在本地，不入仓
+new/
