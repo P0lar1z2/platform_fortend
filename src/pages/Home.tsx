@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, ArrowUpRight, TrendingUp, TrendingDown, ChevronRight, Eye, BarChart3, Globe, Database, Clock, Star, ArrowRight, X } from "lucide-react";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { truncate20 } from "../lib/labels";
+import UserMenu from "../components/UserMenu";
 
 // ─── MOCK DATA ───────────────────────────────────────────
 const STATS = [
@@ -318,13 +319,7 @@ export default function RaventikCN() {
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; }}
               >{item.label}</Link>
             ))}
-            <Link to="/login" className="cb" style={{
-              padding: "6px 16px", fontSize: "13px", fontWeight: 500,
-              color: "#0a0a0a", background: "#fff", borderRadius: "9999px",
-              textDecoration: "none",
-              display: "flex", alignItems: "center", gap: "4px",
-              fontFamily: body,
-            }}>登录 <ArrowUpRight size={13} /></Link>
+            <UserMenu variant="filled" />
           </div>
         </div>
       </nav>
