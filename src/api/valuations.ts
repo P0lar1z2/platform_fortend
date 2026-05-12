@@ -1,20 +1,21 @@
-import { apiClient } from "./client";
+import { apiClient, API_MOCK } from "./client";
 import type { ValuationRequest, ValuationResponse, PriceRange } from "./types";
 
 // PDF 4.3 价格校验
 export async function fetchPriceRange(ref: string): Promise<PriceRange> {
-  // TODO: 切真实接口
-  // const { data } = await apiClient.get<PriceRange>(`/watches/${encodeURIComponent(ref)}/price-range`);
-  // return data;
-  void apiClient;
+  if (!API_MOCK) {
+    const { data } = await apiClient.get<PriceRange>(`/watches/${encodeURIComponent(ref)}/price-range`);
+    return data;
+  }
   await sleep(120);
-  return { p5: 950000, p95: 1800000 };
+  return { p5: 950000, p95: 1800000, sampleCount: 142 };
 }
 
 export async function postValuation(req: ValuationRequest): Promise<ValuationResponse> {
-  // TODO: 切真实接口
-  // const { data } = await apiClient.post<ValuationResponse>("/valuations", req);
-  // return data;
+  if (!API_MOCK) {
+    const { data } = await apiClient.post<ValuationResponse>("/valuations", req);
+    return data;
+  }
   await sleep(280);
   return MOCK_VALUATION(req);
 }
@@ -54,8 +55,6 @@ function MOCK_VALUATION(req: ValuationRequest): ValuationResponse {
         ],
       },
     ],
-    // PDF 4.4.4 询价范围 = buy × (1 - lower_pct, 1 + upper_pct) 默认 -20%/+30%
-    // 后端按"价格→成色加分→附件加分"排序
     sourcing: [
       { platform: "Yahoo", title: "ROLEX Submariner Date 126610LN 美品", ref: req.ref, price: Math.round(buy * 0.92), condition: "A", accessories: { box: true, card: true }, listingUrl: "https://example.com/yahoo/1" },
       { platform: "Rakuten", title: "ロレックス サブマリーナデイト 黒 2022", ref: req.ref, price: Math.round(buy * 0.96), condition: "A", accessories: { box: true, card: false }, listingUrl: "https://example.com/rakuten/1" },
