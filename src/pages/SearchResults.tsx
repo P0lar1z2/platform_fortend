@@ -5,6 +5,7 @@ import { useSearchHistory } from "../hooks/useSearchHistory";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useWatchlist } from "../hooks/useWatchlist";
 import WatchlistToggle from "../components/WatchlistToggle";
+import SearchEmptyState from "../components/SearchEmptyState";
 import { WATCHLIST_CAPACITY } from "../lib/constants";
 import { searchWatches } from "../api/search";
 import type { WatchListItem } from "../api/types";
@@ -663,20 +664,8 @@ export default function SearchResults() {
           </div>
         )}
 
-        {/* ─── Empty state ─── */}
-        {!loading && total === 0 && (
-          <div style={{
-            textAlign: "center", padding: "80px 20px",
-          }}>
-            <Search size={40} color="rgba(255,255,255,0.1)" style={{ marginBottom: "16px" }} />
-            <h3 style={{ fontFamily: "'Noto Serif SC', serif", fontSize: "22px", fontWeight: 700, color: "rgba(255,255,255,0.6)", marginBottom: "8px" }}>
-              未找到匹配结果
-            </h3>
-            <p style={{ fontSize: "13px", fontWeight: 300, color: "rgba(255,255,255,0.35)", fontFamily: body }}>
-              试试其他关键词或调整筛选条件
-            </p>
-          </div>
-        )}
+        {/* ─── Empty state (PDF 3.1.1.8) ─── */}
+        {!loading && total === 0 && <SearchEmptyState query={urlQ} />}
       </main>
 
       {/* overflow modal removed — toast 已统一提示（共享 WatchlistToggle 处理） */}
