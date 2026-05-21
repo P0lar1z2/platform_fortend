@@ -387,8 +387,8 @@ export default function ConfigPage() {
           <div style={{display:"flex",gap:"20px"}}>
             {["隐私政策","服务条款","联系我们"].map((l,i)=>(
               <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}}
-                onMouseEnter={e=>e.target.style.color="rgba(255,255,255,0.7)"}
-                onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.3)"}>{l}</a>
+                onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}}
+                onMouseLeave={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.3)"}}>{l}</a>
             ))}
           </div>
         </div>

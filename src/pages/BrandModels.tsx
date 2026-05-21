@@ -25,6 +25,7 @@ import { useViewPreference } from "../hooks/useViewPreference";
 import WatchlistToggle from "../components/WatchlistToggle";
 import { getBrand } from "../api/brands";
 import type { BrandDetail, WatchListItem } from "../api/types";
+import { buildPageList } from "../utils/pagination";
 
 // ─── MOCK DATA ───────────────────────────────────────────
 const BRAND = {
@@ -64,6 +65,15 @@ function WatchPlaceholder({ size = 120 }) {
       <line x1="60" y1="56" x2="72" y2="56" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" />
       <circle cx="60" cy="56" r="2" fill="rgba(255,255,255,0.2)" />
     </svg>
+  );
+}
+
+function WatchImage({ src, alt, size = 120 }: { src?: string | null; alt?: string; size?: number }) {
+  const [err, setErr] = useState(false);
+  if (err || !src) return <WatchPlaceholder size={size} />;
+  return (
+    <img src={src} alt={alt} onError={() => setErr(true)}
+         style={{ width: size, height: size, objectFit: "contain", display: "block" }} />
   );
 }
 
@@ -251,7 +261,7 @@ export default function BrandModels() {
                      onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
                      style={{padding:0,display:"flex",flexDirection:"column"}}>
                   <div style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
-                    <WatchPlaceholder size={160}/>
+                    <WatchImage src={w.thumbUrl} alt={w.name} size={160}/>
                   </div>
                   <div style={{padding:"16px 18px 18px",flex:1,display:"flex",flexDirection:"column"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"6px"}}>
@@ -302,7 +312,7 @@ export default function BrandModels() {
                      style={{display:"grid",gridTemplateColumns:"48px 1fr 100px 90px 150px 90px 36px 36px",padding:"10px 20px",gap:"12px",borderBottom:i<pageData.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail */}
                   <div style={{width:"42px",height:"42px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
-                    <WatchPlaceholder size={36}/>
+                    <WatchImage src={w.thumbUrl} alt={w.name} size={36}/>
                   </div>
                   {/* Ref + Name */}
                   <div style={{display:"flex",alignItems:"center",gap:"8px",overflow:"hidden",minWidth:0}}>
@@ -329,8 +339,10 @@ export default function BrandModels() {
         {totalPages > 1 && (
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",marginTop:"32px"}}>
             <button className="pg-btn" onClick={()=>goPage(page-1)} disabled={page===1} style={{background:"rgba(255,255,255,0.04)",color:page===1?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronLeft size={16}/></button>
-            {Array.from({length:totalPages},(_,i)=>i+1).map(p=>(
-              <button key={p} className="pg-btn" onClick={()=>goPage(p)} style={{background:p===page?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:p===page?"#fff":"rgba(255,255,255,0.5)",fontFamily:bd}}>{p}</button>
+            {buildPageList(page, totalPages).map((p,i)=>(
+              p === "..."
+                ? <span key={`e${i}`} className="pg-btn" style={{cursor:"default",color:"rgba(255,255,255,0.3)",fontFamily:bd}}>…</span>
+                : <button key={p} className="pg-btn" onClick={()=>goPage(p)} style={{background:p===page?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:p===page?"#fff":"rgba(255,255,255,0.5)",fontFamily:bd}}>{p}</button>
             ))}
             <button className="pg-btn" onClick={()=>goPage(page+1)} disabled={page===totalPages} style={{background:"rgba(255,255,255,0.04)",color:page===totalPages?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronRight size={16}/></button>
           </div>
@@ -349,8 +361,8 @@ export default function BrandModels() {
           <div style={{display:"flex",gap:"20px"}}>
             {["隐私政策","服务条款","联系我们"].map((l,i)=>(
               <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}}
-                onMouseEnter={e=>e.target.style.color="rgba(255,255,255,0.7)"}
-                onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.3)"}>{l}</a>
+                onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}}
+                onMouseLeave={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.3)"}}>{l}</a>
             ))}
           </div>
         </div>

@@ -98,6 +98,7 @@ export default function WatchDetail() {
   const [vm, setVm] = useState("chart");
   const [visSrc, setVisSrc] = useState(DATA_SOURCES.map(s => s.key));
   const [txPg, setTxPg] = useState(1);
+  const [imgIdx, setImgIdx] = useState(0);
 
   useEffect(() => {
     setWatch(null); setWatchError(null);
@@ -130,6 +131,10 @@ export default function WatchDetail() {
   const [priceRange, setPriceRange] = useState<{ p5: number; p95: number } | null>(null);
   const [valuationResult, setValuationResult] = useState<ValuationResponse | null>(null);
   const [valuationLoading, setValuationLoading] = useState(false);
+  const [valuationError, setValuationError] = useState<string | null>(null);
+
+  const numericInput = inputMode === "price" ? Number(buyPrice) : Number(targetMargin);
+  const canRunValuation = Number.isFinite(numericInput) && numericInput > 0;
 
   useEffect(() => {
     fetchPriceRange(ref).then(setPriceRange).catch(() => setPriceRange(null));
@@ -222,13 +227,27 @@ export default function WatchDetail() {
             {/* Left — Image area (compact layout) */}
             {/* API: WATCH.images[] — first = main, rest = gallery */}
             <div style={{background:"rgba(255,255,255,0.02)",borderRight:"1px solid rgba(255,255,255,0.04)",display:"flex",flexDirection:"column",padding:"20px"}}>
-              {/* Main image — constrained height, no excess padding */}
+              {/* Main image — constrained height */}
               <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",maxHeight:"360px",marginBottom:"12px"}}>
-                <WatchPlaceholder/>
+                {watch && watch.images && watch.images.length > 0 ? (
+                  <img
+                    src={watch.images[Math.min(imgIdx, watch.images.length-1)]}
+                    alt={watch.name || watch.ref}
+                    style={{maxWidth:"100%",maxHeight:"360px",objectFit:"contain",borderRadius:"8px"}}
+                    onError={(e)=>{(e.target as HTMLImageElement).style.display="none"}}
+                  />
+                ) : (
+                  <WatchPlaceholder/>
+                )}
               </div>
-              {/* Thumbnail strip — tight spacing */}
+              {/* Thumbnail strip */}
               <div style={{display:"flex",gap:"6px",justifyContent:"center"}}>
-                {[0,1,2,3].map(i=>(<div key={i} style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all 0.2s ease"}}><span style={{fontSize:"10px",color:"rgba(255,255,255,0.15)",fontFamily:bd}}>{i+1}</span></div>))}
+                {(watch?.images ?? []).slice(0,4).map((src,i)=>(
+                  <div key={i} onClick={()=>setImgIdx(i)} style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:i===imgIdx?"1px solid rgba(255,255,255,0.3)":"1px solid rgba(255,255,255,0.06)",overflow:"hidden",cursor:"pointer",transition:"all 0.2s ease"}}>
+                    <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none"}}/>
+                  </div>
+                ))}
+                {(watch?.images ?? []).length === 0 && [0,1,2,3].map(i=>(<div key={i} style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}/>))}
               </div>
             </div>
 
@@ -364,17 +383,23 @@ export default function WatchDetail() {
             {/* Chart view */}
             {vm==="chart"&&<div style={{padding:"20px 24px 24px"}}><PriceChart data={pData} visible={visSrc}/></div>}
 
-            {/* List view — matches screenshot: 来源/日期/成交价/成色/配件/材质/表盘色/Ref/链接 */}
+            {/* List view — matches screenshot: 图/来源/日期/成交价/成色/配件/材质/表盘色/Ref/链接 */}
             {/* API: GET /api/watches/:ref/transactions?period={tw}&page=&limit= */}
             {vm==="list"&&(<>
-              <div style={{display:"grid",gridTemplateColumns:"100px 140px 120px 55px 85px 55px 65px 90px 1fr",padding:"10px 24px",gap:"8px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
-                {["来源","拍卖日期","成交价 (JPY)","成色","配件","材质","表盘色","Ref",""].map((h,i)=>(<span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>))}
+              <div style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"10px 24px",gap:"8px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
+                {["","来源","拍卖日期","成交价 (JPY)","成色","配件","材质","表盘色","Ref",""].map((h,i)=>(<span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>))}
               </div>
               {txPD.map((tx,i)=>(
-                <div key={tx.id} className="tr" style={{display:"grid",gridTemplateColumns:"100px 140px 120px 55px 85px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
+                <div key={tx.id} className="tr" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
+                  {/* Thumbnail — tx.thumbUrl (mongo product_image_url) */}
+                  <div style={{width:"32px",height:"32px",borderRadius:"6px",overflow:"hidden",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {tx.thumbUrl
+                      ? <img src={tx.thumbUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+                      : <span style={{fontSize:"9px",color:"rgba(255,255,255,0.2)",fontFamily:bd}}>—</span>}
+                  </div>
                   {/* Source badge — colored per source */}
                   <span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:"6px",fontSize:"11px",fontWeight:500,background:`${SOURCE_COLORS[tx.source]}18`,color:SOURCE_COLORS[tx.source]||"#888",fontFamily:bd,width:"fit-content"}}>{tx.sourceName}</span>
-                  <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.dateTime}</span>
+                  <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.date ?? tx.dateTime ?? "—"}</span>
                   <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{tx.price.toLocaleString()}</span>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.condition}</span>
                   {/* Accessories — Box/Card badges matching screenshot style */}
@@ -541,14 +566,14 @@ export default function WatchDetail() {
             </div>
 
             {/* PDF 4.3 运行估值 —— POST /api/valuations */}
-            <button className="cb" disabled={valuationLoading}
+            <button className="cb" disabled={valuationLoading || !canRunValuation}
               onClick={async () => {
-                setShowResults(true); setExpandedRoutes({}); setValuationLoading(true);
+                setShowResults(true); setExpandedRoutes({}); setValuationLoading(true); setValuationError(null);
                 try {
                   const result = await postValuation({
                     ref,
                     mode: inputMode === "price" ? "price" : "margin",
-                    value: inputMode === "price" ? Number(buyPrice || 0) : Number(targetMargin || 0),
+                    value: numericInput,
                     source: valuationSource === "全部" ? "all" : (valuationSource as any),
                     condition: condition as "S" | "A" | "B" | "C" | "J",
                     accessories: { box: hasBox, card: hasCard },
@@ -556,18 +581,37 @@ export default function WatchDetail() {
                     warrantyYear: warrantyYear ? Number(warrantyYear) : null,
                   });
                   setValuationResult(result);
+                } catch (e: any) {
+                  const msg = e?.response?.data?.error?.message
+                    || e?.message
+                    || "估值失败,请稍后重试";
+                  setValuationError(msg);
+                  setValuationResult(null);
                 } finally { setValuationLoading(false); }
               }}
               style={{
                 width:"100%",padding:"13px",borderRadius:"12px",border:"none",
-                cursor: valuationLoading ? "wait" : "pointer",
+                cursor: (valuationLoading || !canRunValuation) ? "not-allowed" : "pointer",
                 background:"linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))",
                 boxShadow:"inset 0 0 0 1px rgba(34,197,94,0.25), inset 0 1px 1px rgba(255,255,255,0.1)",
                 color:"#22c55e",fontSize:"14px",fontWeight:600,fontFamily:bd,
                 display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",transition:"all 0.3s ease",
-                opacity: valuationLoading ? 0.7 : 1,
+                opacity: (valuationLoading || !canRunValuation) ? 0.5 : 1,
               }}><Zap size={15}/> {valuationLoading ? "估值中..." : "运行估值"}</button>
           </div>
+
+          {/* 估值失败时的错误提示(不阻塞页面渲染) */}
+          {showResults && valuationError && (
+            <div className="gc" style={{padding:"16px 20px",borderRadius:"14px",marginBottom:"16px",border:"1px solid rgba(239,68,68,0.2)",background:"rgba(239,68,68,0.06)"}}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:"10px"}}>
+                <span style={{fontSize:"14px",lineHeight:"16px"}}>⚠️</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"13px",fontWeight:500,color:"#ef4444",fontFamily:bd,marginBottom:"3px"}}>估值未完成</div>
+                  <div style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.55)",fontFamily:bd,lineHeight:1.5}}>{valuationError}</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Results Area —— 全部由 valuationResult (POST /api/valuations 返回) 驱动 ── */}
           {showResults && valuationResult && (() => {
@@ -575,7 +619,13 @@ export default function WatchDetail() {
             const bestDec = decisionMeta(v.bestCombo.decision);
             const bestPlatformName = DATA_SOURCE_BY_KEY[v.bestCombo.platform]?.name ?? v.bestCombo.platform;
             const bestRouteLabel = v.routes.find(r => r.key === v.bestCombo.route)?.label ?? v.bestCombo.route;
-            const inputPrice = inputMode === "price" ? Number(buyPrice || 0) : Math.round(v.bestCombo.cost / 1.155);
+            // margin 模式优先用 backend 反解出的 inputPrice;否则按 cost 粗略反推。
+            const inputPrice =
+              v.inputPrice && v.inputPrice > 0
+                ? v.inputPrice
+                : inputMode === "price"
+                ? Number(buyPrice || 0)
+                : Math.round(v.bestCombo.cost / 1.155);
 
             return (<div>
               {/* ── 摘要卡片 (PDF 4.3 结果展示结构) ── */}
@@ -736,7 +786,7 @@ export default function WatchDetail() {
       <footer style={{padding:"32px 40px 24px",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
         <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:"16px"}}><span style={{fontFamily:hd,fontStyle:"italic",fontSize:"16px",color:"rgba(255,255,255,0.5)"}}>Raventik</span><span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.25)",fontFamily:bd}}>© 2026 谕鸦科技 Ravacle Inc.</span></div>
-          <div style={{display:"flex",gap:"20px"}}>{["隐私政策","服务条款","联系我们"].map((l,i)=>(<a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}} onMouseEnter={e=>e.target.style.color="rgba(255,255,255,0.7)"} onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.3)"}>{l}</a>))}</div>
+          <div style={{display:"flex",gap:"20px"}}>{["隐私政策","服务条款","联系我们"].map((l,i)=>(<a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}} onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}} onMouseLeave={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.3)"}}>{l}</a>))}</div>
         </div>
       </footer>
     </div>

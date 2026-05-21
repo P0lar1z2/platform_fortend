@@ -8,6 +8,7 @@ import WatchlistToggle from "../components/WatchlistToggle";
 import SearchEmptyState from "../components/SearchEmptyState";
 import { WATCHLIST_CAPACITY } from "../lib/constants";
 import { searchWatches } from "../api/search";
+import { buildPageList } from "../utils/pagination";
 import type { WatchListItem } from "../api/types";
 
 // ─── MOCK DATA (24 watches) ─────────────────────────────
@@ -644,12 +645,14 @@ export default function SearchResults() {
               <ChevronLeft size={16} />
             </button>
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-              <button key={p} className="page-btn" onClick={() => goPage(p)} style={{
-                background: p === page ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
-                color: p === page ? "#fff" : "rgba(255,255,255,0.5)",
-                fontFamily: body, fontWeight: p === page ? 500 : 400,
-              }}>{p}</button>
+            {buildPageList(page, totalPages).map((p, i) => (
+              p === "..."
+                ? <span key={`e${i}`} className="page-btn" style={{cursor:"default",color:"rgba(255,255,255,0.3)",fontFamily:body}}>…</span>
+                : <button key={p} className="page-btn" onClick={() => goPage(p)} style={{
+                    background: p === page ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
+                    color: p === page ? "#fff" : "rgba(255,255,255,0.5)",
+                    fontFamily: body, fontWeight: p === page ? 500 : 400,
+                  }}>{p}</button>
             ))}
 
             <button className="page-btn" onClick={() => goPage(page + 1)}
@@ -686,8 +689,8 @@ export default function SearchResults() {
           <div style={{ display: "flex", gap: "20px" }}>
             {["隐私政策", "服务条款", "联系我们"].map((link, i) => (
               <a key={i} href="#" style={{ fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.3)", textDecoration: "none", transition: "color 0.2s", fontFamily: body }}
-              onMouseEnter={e => e.target.style.color = "rgba(255,255,255,0.7)"}
-              onMouseLeave={e => e.target.style.color = "rgba(255,255,255,0.3)"}
+              onMouseEnter={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.7)" }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.3)" }}
               >{link}</a>
             ))}
           </div>

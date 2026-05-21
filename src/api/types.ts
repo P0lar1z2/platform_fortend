@@ -59,6 +59,8 @@ export interface ValuationResponse {
   windowDays?: number;
   routes: RouteResult[];
   sourcing?: SourcingListing[];
+  /** margin 模式下后端反解出来的预计买入价(JPY);price 模式时与请求 value 一致 */
+  inputPrice?: number;
 }
 
 export interface PriceRange { p5: number; p95: number; sampleCount?: number; }
@@ -119,6 +121,7 @@ export interface MarketTx {
   dialColor?: string;
   ref?: string;
   listingUrl?: string;
+  thumbUrl?: string;
 }
 
 export interface MarketOverall {

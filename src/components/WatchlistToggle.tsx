@@ -29,7 +29,7 @@ export default function WatchlistToggle({ entry, variant = "icon", style }: Prop
       toast.push("已取消关注", "info");
     } else if (result.ok) {
       toast.push("已加入关注，系统将自动监控", "success");
-    } else if (result.reason === "full") {
+    } else if ("reason" in result && result.reason === "full") {
       toast.push("关注已满 30 个，请先取消部分关注", "warning");
     }
   }

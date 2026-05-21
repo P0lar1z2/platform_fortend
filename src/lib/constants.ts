@@ -1,7 +1,7 @@
 // PDF 4.3.1.1 数据源集中配置 —— 全站唯一来源
 // 新增数据源只改这一处
 
-export type DataSourceKey = "starbuyer" | "ecoauc";
+export type DataSourceKey = "starbuyer" | "ecoauc" | "chrono24";
 
 export interface DataSource {
   key: DataSourceKey;
@@ -15,6 +15,7 @@ export interface DataSource {
 export const DATA_SOURCES: DataSource[] = [
   { key: "starbuyer", name: "StarBuyers", color: "#34d399", logoUrl: null, logoWidth: 100, logoHeight: 28 },
   { key: "ecoauc", name: "EcoAuc", color: "#60a5fa", logoUrl: null, logoWidth: 100, logoHeight: 28 },
+  { key: "chrono24", name: "Chrono24", color: "#f59e0b", logoUrl: null, logoWidth: 100, logoHeight: 28 },
 ];
 
 export const DATA_SOURCE_BY_KEY: Record<DataSourceKey, DataSource> = DATA_SOURCES.reduce(

@@ -24,6 +24,7 @@ import { useWatchlist } from "../hooks/useWatchlist";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useToast } from "../components/Toast";
 import { WATCHLIST_CAPACITY, WATCHLIST_WARN_THRESHOLD } from "../lib/constants";
+import { buildPageList } from "../utils/pagination";
 
 const PER_PAGE = 12;
 
@@ -323,8 +324,10 @@ export default function Watchlist() {
         {watches.length > 0 && totalPages > 1 && (
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",marginTop:"32px"}}>
             <button className="pg-btn" onClick={()=>goPage(page-1)} disabled={page===1} style={{background:"rgba(255,255,255,0.04)",color:page===1?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronLeft size={16}/></button>
-            {Array.from({length:totalPages},(_,i)=>i+1).map(p=>(
-              <button key={p} className="pg-btn" onClick={()=>goPage(p)} style={{background:p===page?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:p===page?"#fff":"rgba(255,255,255,0.5)",fontFamily:bd}}>{p}</button>
+            {buildPageList(page, totalPages).map((p,i)=>(
+              p === "..."
+                ? <span key={`e${i}`} className="pg-btn" style={{cursor:"default",color:"rgba(255,255,255,0.3)",fontFamily:bd}}>…</span>
+                : <button key={p} className="pg-btn" onClick={()=>goPage(p)} style={{background:p===page?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:p===page?"#fff":"rgba(255,255,255,0.5)",fontFamily:bd}}>{p}</button>
             ))}
             <button className="pg-btn" onClick={()=>goPage(page+1)} disabled={page===totalPages} style={{background:"rgba(255,255,255,0.04)",color:page===totalPages?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronRight size={16}/></button>
           </div>
@@ -341,8 +344,8 @@ export default function Watchlist() {
           <div style={{display:"flex",gap:"20px"}}>
             {["隐私政策","服务条款","联系我们"].map((l,i)=>(
               <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}}
-                onMouseEnter={e=>e.target.style.color="rgba(255,255,255,0.7)"}
-                onMouseLeave={e=>e.target.style.color="rgba(255,255,255,0.3)"}>{l}</a>
+                onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}}
+                onMouseLeave={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.3)"}}>{l}</a>
             ))}
           </div>
         </div>
