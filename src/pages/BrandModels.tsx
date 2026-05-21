@@ -89,7 +89,8 @@ export default function BrandModels() {
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
 
-  const effectiveSlug = slug ?? "rolex";
+  // 没有 slug 时 App.tsx 已把 /brands 路由到 BrandList,这里只兜底防御
+  const effectiveSlug = slug ?? "";
 
   // Phase 11.F.2 —— 品牌信息 + 表款列表由 GET /api/brands/:slug 拉
   const [detail, setDetail] = useState<BrandDetail | null>(null);

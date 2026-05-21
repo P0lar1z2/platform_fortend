@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import SearchResults from "./pages/SearchResults";
 import WatchDetail from "./pages/WatchDetail";
 import BrandModels from "./pages/BrandModels";
+import BrandList from "./pages/BrandList";
 import Watchlist from "./pages/Watchlist";
 import Config from "./pages/Config";
 import Login from "./pages/Login";
@@ -18,7 +19,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/watch/:ref" element={<WatchDetail />} />
-          <Route path="/brands" element={<BrandModels />} />
+          <Route path="/brands" element={<BrandList />} />
           <Route path="/brands/:slug" element={<BrandModels />} />
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/config" element={<Config />} />
