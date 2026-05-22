@@ -318,18 +318,18 @@ export default function WatchDetail() {
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"20px"}}>
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>近期均价</div>
-                <div style={{fontSize:"24px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{oStats.avg.toLocaleString()}</div>
+                <div style={{fontSize:"24px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{(oStats.avg ?? 0).toLocaleString()}</div>
               </div>
               {/* Highest — clickable, links to that listing */}
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>最高价</div>
-                <a href={oStats.maxTx?.listingUrl||"#"} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"24px",fontWeight:600,color:"#22c55e",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{oStats.max.toLocaleString()}<ExternalLink size={13} color="rgba(34,197,94,0.5)"/></a>
+                <a href={oStats.maxTx?.listingUrl||"#"} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"24px",fontWeight:600,color:"#22c55e",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{(oStats.max ?? 0).toLocaleString()}<ExternalLink size={13} color="rgba(34,197,94,0.5)"/></a>
                 {oStats.maxTx&&<div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{oStats.maxTx.date} · {oStats.maxTx.sourceName}</div>}
               </div>
               {/* Lowest — clickable */}
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>最低价</div>
-                <a href={oStats.minTx?.listingUrl||"#"} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"24px",fontWeight:600,color:"#f59e0b",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{oStats.min.toLocaleString()}<ExternalLink size={13} color="rgba(245,158,11,0.5)"/></a>
+                <a href={oStats.minTx?.listingUrl||"#"} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"24px",fontWeight:600,color:"#f59e0b",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{(oStats.min ?? 0).toLocaleString()}<ExternalLink size={13} color="rgba(245,158,11,0.5)"/></a>
                 {oStats.minTx&&<div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{oStats.minTx.date} · {oStats.minTx.sourceName}</div>}
               </div>
               <div>
@@ -354,7 +354,7 @@ export default function WatchDetail() {
                   {[{l:"均价",v:src.s.avg},{l:"最高",v:src.s.max,lk:src.s.maxTx?.listingUrl},{l:"最低",v:src.s.min,lk:src.s.minTx?.listingUrl}].map((it,i)=>(
                     <div key={i}>
                       <div style={{fontSize:"9px",fontWeight:500,color:"rgba(255,255,255,0.25)",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:"3px",fontFamily:bd}}>{it.l}</div>
-                      {it.lk?(<a href={it.lk} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{it.v.toLocaleString()}</a>):(<div style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{it.v.toLocaleString()}</div>)}
+                      {it.lk?(<a href={it.lk} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{(it.v ?? 0).toLocaleString()}</a>):(<div style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{(it.v ?? 0).toLocaleString()}</div>)}
                     </div>
                   ))}
                 </div>
@@ -400,7 +400,7 @@ export default function WatchDetail() {
                   {/* Source badge — colored per source */}
                   <span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:"6px",fontSize:"11px",fontWeight:500,background:`${SOURCE_COLORS[tx.source]}18`,color:SOURCE_COLORS[tx.source]||"#888",fontFamily:bd,width:"fit-content"}}>{tx.sourceName}</span>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.date ?? tx.dateTime ?? "—"}</span>
-                  <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{tx.price.toLocaleString()}</span>
+                  <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{(tx.price ?? 0).toLocaleString()}</span>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.condition}</span>
                   {/* Accessories — Box/Card badges matching screenshot style */}
                   <div style={{display:"flex",gap:"4px"}}>
@@ -502,7 +502,7 @@ export default function WatchDetail() {
                   return (
                     <div style={{display:"flex",alignItems:"flex-start",gap:"6px",marginTop:"10px",padding:"8px 12px",borderRadius:"10px",background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.12)"}}>
                       <span style={{fontSize:"13px",lineHeight:"16px",flexShrink:0}}>⚠️</span>
-                      <span style={{fontSize:"11px",fontWeight:300,color:"rgba(245,158,11,0.8)",fontFamily:bd,lineHeight:1.5}}>近期最低成交价约 ¥{priceRange.p5.toLocaleString()}，当前输入显著偏低，结果仅供参考</span>
+                      <span style={{fontSize:"11px",fontWeight:300,color:"rgba(245,158,11,0.8)",fontFamily:bd,lineHeight:1.5}}>近期最低成交价约 ¥{(priceRange.p5 ?? 0).toLocaleString()}，当前输入显著偏低，结果仅供参考</span>
                     </div>
                   );
                 }
@@ -510,7 +510,7 @@ export default function WatchDetail() {
                   return (
                     <div style={{display:"flex",alignItems:"flex-start",gap:"6px",marginTop:"10px",padding:"8px 12px",borderRadius:"10px",background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.12)"}}>
                       <span style={{fontSize:"13px",lineHeight:"16px",flexShrink:0}}>⚠️</span>
-                      <span style={{fontSize:"11px",fontWeight:300,color:"rgba(245,158,11,0.8)",fontFamily:bd,lineHeight:1.5}}>近期最高成交价约 ¥{priceRange.p95.toLocaleString()}，当前输入显著偏高，结果仅供参考</span>
+                      <span style={{fontSize:"11px",fontWeight:300,color:"rgba(245,158,11,0.8)",fontFamily:bd,lineHeight:1.5}}>近期最高成交价约 ¥{(priceRange.p95 ?? 0).toLocaleString()}，当前输入显著偏高，结果仅供参考</span>
                     </div>
                   );
                 }
@@ -640,20 +640,20 @@ export default function WatchDetail() {
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px"}}>
                   <div style={{padding:"18px 20px",borderRadius:"14px",background:"rgba(255,255,255,0.03)",border:`1px solid ${bestDec.color}15`}}>
                     <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"6px",fontFamily:bd}}>利润率</div>
-                    <div style={{fontSize:"34px",fontWeight:700,color:bestDec.color,fontFamily:bd,letterSpacing:"-1px",lineHeight:1}}>{v.bestCombo.margin>0?"+":""}{v.bestCombo.margin.toFixed(1)}%</div>
+                    <div style={{fontSize:"34px",fontWeight:700,color:bestDec.color,fontFamily:bd,letterSpacing:"-1px",lineHeight:1}}>{(v.bestCombo.margin ?? 0)>0?"+":""}{(v.bestCombo.margin ?? 0).toFixed(1)}%</div>
                   </div>
                   <div style={{padding:"18px 20px",borderRadius:"14px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.05)"}}>
                     <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"6px",fontFamily:bd}}>预估净回款</div>
-                    <div style={{fontSize:"26px",fontWeight:600,color:"#fff",fontFamily:bd,letterSpacing:"-0.5px"}}>¥{v.bestCombo.net.toLocaleString()}</div>
+                    <div style={{fontSize:"26px",fontWeight:600,color:"#fff",fontFamily:bd,letterSpacing:"-0.5px"}}>¥{(v.bestCombo.net ?? 0).toLocaleString()}</div>
                   </div>
                   <div style={{padding:"18px 20px",borderRadius:"14px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.05)"}}>
                     <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"6px",fontFamily:bd}}>总成本</div>
-                    <div style={{fontSize:"26px",fontWeight:600,color:"rgba(255,255,255,0.7)",fontFamily:bd,letterSpacing:"-0.5px"}}>¥{v.bestCombo.cost.toLocaleString()}</div>
+                    <div style={{fontSize:"26px",fontWeight:600,color:"rgba(255,255,255,0.7)",fontFamily:bd,letterSpacing:"-0.5px"}}>¥{(v.bestCombo.cost ?? 0).toLocaleString()}</div>
                   </div>
                 </div>
                 {/* PDF 估价级别映射 —— 摘要卡片底部小字 */}
                 <div style={{marginTop:"14px",fontSize:"11px",color:"rgba(255,255,255,0.25)",fontFamily:bd}}>
-                  {valuationLevelLabel(v.level)} · {v.samples ?? 0}条样本 · 近{v.windowDays ?? 30}天 · 预期买入价 ¥{inputPrice.toLocaleString()}
+                  {valuationLevelLabel(v.level)} · {v.samples ?? 0}条样本 · 近{v.windowDays ?? 30}天 · 预期买入价 ¥{(inputPrice ?? 0).toLocaleString()}
                 </div>
               </div>
 
@@ -682,10 +682,10 @@ export default function WatchDetail() {
                           <div style={{fontSize:"13px",fontWeight:500,color:"#fff",fontFamily:bd}}>{r.label}</div>
                         </div>
                         <span style={{display:"inline-flex",alignItems:"center",gap:"3px",padding:"4px 12px",borderRadius:"8px",fontSize:"12px",fontWeight:600,background:routeDec.bg,color:routeDec.color,fontFamily:bd,width:"fit-content"}}>{routeDec.label}</span>
-                        <span style={{fontSize:"14px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>¥{inputPrice.toLocaleString()}</span>
-                        <span style={{fontSize:"14px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>¥{r.cost.toLocaleString()}</span>
-                        <span style={{fontSize:"14px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>¥{r.avgRevenue.toLocaleString()}</span>
-                        <span style={{fontSize:"14px",fontWeight:700,color:routeDec.color,fontFamily:bd}}>{r.avgMargin>0?"+":""}{r.avgMargin.toFixed(1)}%</span>
+                        <span style={{fontSize:"14px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>¥{(inputPrice ?? 0).toLocaleString()}</span>
+                        <span style={{fontSize:"14px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>¥{(r.cost ?? 0).toLocaleString()}</span>
+                        <span style={{fontSize:"14px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>¥{(r.avgRevenue ?? 0).toLocaleString()}</span>
+                        <span style={{fontSize:"14px",fontWeight:700,color:routeDec.color,fontFamily:bd}}>{(r.avgMargin ?? 0)>0?"+":""}{(r.avgMargin ?? 0).toFixed(1)}%</span>
                       </div>
 
                       {isOpen && (
@@ -715,10 +715,10 @@ export default function WatchDetail() {
                                   <span style={{fontSize:"12px",fontWeight:500,color:"rgba(255,255,255,0.6)",fontFamily:bd}}>{sellP.name}</span>
                                 </div>
                                 <span style={{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:"6px",fontSize:"10px",fontWeight:600,background:pDec.bg,color:pDec.color,fontFamily:bd,width:"fit-content"}}>{pDec.label}</span>
-                                <span style={{fontSize:"12px",fontWeight:600,color:pDec.color,fontFamily:bd}}>{sellP.margin>0?"+":""}{sellP.margin.toFixed(1)}%</span>
-                                <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>¥{sellP.revenue.toLocaleString()}</span>
-                                <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{(sellP.feeRate*100).toFixed(1)}%</span>
-                                <span style={{fontSize:"12px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>¥{sellP.net.toLocaleString()}</span>
+                                <span style={{fontSize:"12px",fontWeight:600,color:pDec.color,fontFamily:bd}}>{(sellP.margin ?? 0)>0?"+":""}{(sellP.margin ?? 0).toFixed(1)}%</span>
+                                <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>¥{(sellP.revenue ?? 0).toLocaleString()}</span>
+                                <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{((sellP.feeRate ?? 0)*100).toFixed(1)}%</span>
+                                <span style={{fontSize:"12px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>¥{(sellP.net ?? 0).toLocaleString()}</span>
                               </div>
                             );
                           })}
@@ -756,7 +756,7 @@ export default function WatchDetail() {
                 }}>
                   <span style={{fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.55)",fontFamily:bd,textTransform:"uppercase",letterSpacing:"0.5px"}}>{s.platform}</span>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.7)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.title}</span>
-                  <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{s.price.toLocaleString()}</span>
+                  <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{(s.price ?? 0).toLocaleString()}</span>
                   <span style={{fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{s.condition || "—"}</span>
                   <div style={{display:"flex",gap:"4px"}}>
                     {s.accessories?.box && <span style={{fontSize:"10px",padding:"2px 7px",borderRadius:"5px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)"}}>Box</span>}
