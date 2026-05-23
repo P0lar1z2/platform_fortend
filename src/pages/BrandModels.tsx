@@ -20,7 +20,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Search, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X } from "lucide-react";
+import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
 import WatchlistToggle from "../components/WatchlistToggle";
 import { getBrand } from "../api/brands";
@@ -129,8 +129,6 @@ export default function BrandModels() {
         .gp{background:rgba(255,255,255,0.08);background-blend-mode:luminosity;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:none;border-radius:9999px;box-shadow:inset 0 1px 1px rgba(255,255,255,0.15),0 2px 12px rgba(0,0,0,0.08);position:relative;overflow:hidden}
         .gp::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(180deg,rgba(255,255,255,0.35) 0%,rgba(255,255,255,0.1) 30%,rgba(255,255,255,0) 50%,rgba(255,255,255,0.1) 70%,rgba(255,255,255,0.35) 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 
-        .gs{background:rgba(255,255,255,0.06);background-blend-mode:luminosity;backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px);border:none;border-radius:9999px;box-shadow:4px 4px 4px rgba(0,0,0,0.05),inset 0 1px 1px rgba(255,255,255,0.2);position:relative;overflow:hidden}
-
         .watch-card{transition:all 0.3s cubic-bezier(0.16,1,0.3,1);cursor:pointer}
         .watch-card:hover{background:rgba(255,255,255,0.1);transform:translateY(-3px);box-shadow:inset 0 1px 1px rgba(255,255,255,0.2),0 12px 40px rgba(0,0,0,0.3)}
 
@@ -151,29 +149,18 @@ export default function BrandModels() {
         .pg-btn{transition:all 0.2s ease;cursor:pointer;display:flex;align-items:center;justify-content:center;min-width:32px;height:32px;border-radius:8px;border:none;font-size:12px}
         .pg-btn:hover{background:rgba(255,255,255,0.12)}
 
-        .sc{transition:all 0.4s cubic-bezier(0.16,1,0.3,1);background:rgba(255,255,255,0.05);background-blend-mode:luminosity;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:none;box-shadow:inset 0 1px 1px rgba(255,255,255,0.1);position:relative;overflow:hidden}
-        .sc::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(180deg,rgba(255,255,255,0.25) 0%,rgba(255,255,255,0.08) 30%,rgba(255,255,255,0) 50%,rgba(255,255,255,0.08) 70%,rgba(255,255,255,0.25) 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
-        .sc:focus-within{box-shadow:inset 0 1px 1px rgba(255,255,255,0.15),0 0 0 1px rgba(255,255,255,0.15),0 8px 40px rgba(0,0,0,0.3)}
-
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
 
       {/* ═══ NAV ═══ */}
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:50,padding:"12px 40px",background:"rgba(10,10,10,0.6)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",gap:"20px"}}>
-          <Link to="/" style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
+        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <Link to="/" style={{display:"flex",alignItems:"center",gap:"10px"}}>
             <img src="/logo/raventik_logo_nav_32.png" width={32} height={32}
                  style={{borderRadius:"8px",objectFit:"contain"}} alt="Raventik"/>
             <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"20px",color:"#fff",letterSpacing:"-0.5px"}}>Raventik</span>
           </Link>
-          <form className="sc"
-                onSubmit={e => { e.preventDefault(); const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value.trim(); if (q) navigate(`/search?q=${encodeURIComponent(q)}`); }}
-                style={{flex:1,maxWidth:"560px",display:"flex",alignItems:"center",gap:"8px",padding:"4px 4px 4px 16px",borderRadius:"9999px"}}>
-            <Search size={16} color="rgba(255,255,255,0.35)"/>
-            <input name="q" type="text" placeholder="搜索品牌、型号或 Ref Number..." style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:"13px",fontWeight:300,color:"#fff",fontFamily:bd}}/>
-            <button type="submit" className="gs" style={{padding:"7px 16px",fontSize:"12px",fontWeight:500,color:"#fff",cursor:"pointer",border:"none",fontFamily:bd}}>搜索</button>
-          </form>
-          <div style={{display:"flex",alignItems:"center",gap:"4px",flexShrink:0}}>
+          <div className="gp" style={{display:"flex",alignItems:"center",gap:"2px",padding:"4px 6px"}}>
             {[
               { to: "/", label: "首页" },
               { to: "/brands", label: "品牌列表" },
@@ -182,7 +169,13 @@ export default function BrandModels() {
             ].map(item => {
               const active = item.to === "/brands";
               return (
-                <Link key={item.to} to={item.to} style={{padding:"6px 12px",fontSize:"12px",fontWeight:400,color:active?"#fff":"rgba(255,255,255,0.6)",textDecoration:"none",borderRadius:"9999px",background:active?"rgba(255,255,255,0.08)":"transparent",fontFamily:bd}}>{item.label}</Link>
+                <Link key={item.to} to={item.to} style={{
+                  padding: "6px 12px", fontSize: "12px", fontWeight: 400,
+                  borderRadius: "9999px",
+                  color: active ? "#fff" : "rgba(255,255,255,0.7)",
+                  background: active ? "rgba(255,255,255,0.08)" : "transparent",
+                  textDecoration: "none", fontFamily: bd, transition: "all 0.2s",
+                }}>{item.label}</Link>
               );
             })}
           </div>

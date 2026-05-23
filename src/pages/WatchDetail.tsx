@@ -64,8 +64,14 @@ function SrcLogo({ source }) {
 function PriceChart({ data, visible }) {
   const W = 720, H = 280, pX = 70, pY = 24;
   const cW = W - pX - 30, cH = H - pY * 2;
-  const all = data.flatMap(d => visible.map(s => d[s]).filter(Boolean));
-  if (!all.length) return null;
+  const all = data.flatMap(d => visible.map(s => d[s]).filter(v => typeof v === "number" && isFinite(v)));
+  if (!all.length) {
+    return (
+      <div style={{height:"260px",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.3)",fontSize:"13px",fontFamily:"Barlow,sans-serif"}}>
+        暂无该时段成交价数据
+      </div>
+    );
+  }
   const mn = Math.min(...all), mx = Math.max(...all), rng = mx - mn || 1;
   const x = (i) => pX + (i / Math.max(1, data.length - 1)) * cW;
   const y = (v) => pY + (1 - (v - mn) / rng) * cH;
@@ -74,8 +80,21 @@ function PriceChart({ data, visible }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}>
       {gP.map((p, i) => (<g key={i}><line x1={pX} y1={y(p)} x2={W - 30} y2={y(p)} stroke="rgba(255,255,255,0.05)" /><text x={pX - 10} y={y(p) + 4} textAnchor="end" fill="rgba(255,255,255,0.25)" fontSize="9" fontFamily="Barlow,sans-serif">¥{(p / 10000).toFixed(0)}万</text></g>))}
-      {dI.map((idx, i) => (<text key={i} x={x(idx)} y={H - 4} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="9" fontFamily="Barlow,sans-serif">{data[idx]?.date.slice(0, 7)}</text>))}
-      {visible.map(s => { const pts = data.map((d, i) => d[s] ? `${x(i)},${y(d[s])}` : null).filter(Boolean).join(" "); return <polyline key={s} points={pts} fill="none" stroke={SOURCE_COLORS[s] || "#888"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />; })}
+      {dI.map((idx, i) => (<text key={i} x={x(idx)} y={H - 4} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="9" fontFamily="Barlow,sans-serif">{data[idx]?.date?.slice(0, 7) ?? ""}</text>))}
+      {visible.map(s => {
+        const ptsArr = data.map((d, i) => (typeof d[s] === "number" && isFinite(d[s])) ? [x(i), y(d[s])] as [number, number] : null).filter(Boolean) as [number, number][];
+        const color = SOURCE_COLORS[s] || "#888";
+        return (
+          <g key={s}>
+            {ptsArr.length >= 2 && (
+              <polyline points={ptsArr.map(([px, py]) => `${px},${py}`).join(" ")} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+            )}
+            {ptsArr.map(([px, py], i) => (
+              <circle key={i} cx={px} cy={py} r={ptsArr.length === 1 ? 4 : 2.5} fill={color} opacity="0.9" />
+            ))}
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -324,13 +343,13 @@ export default function WatchDetail() {
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>最高价</div>
                 <a href={oStats.maxTx?.listingUrl||"#"} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"24px",fontWeight:600,color:"#22c55e",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{(oStats.max ?? 0).toLocaleString()}<ExternalLink size={13} color="rgba(34,197,94,0.5)"/></a>
-                {oStats.maxTx&&<div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{oStats.maxTx.date} · {oStats.maxTx.sourceName}</div>}
+                {oStats.maxTx&&<div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{oStats.maxTx.date || oStats.maxTx.dateTime || "—"} · {oStats.maxTx.sourceName}</div>}
               </div>
               {/* Lowest — clickable */}
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>最低价</div>
                 <a href={oStats.minTx?.listingUrl||"#"} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"24px",fontWeight:600,color:"#f59e0b",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{(oStats.min ?? 0).toLocaleString()}<ExternalLink size={13} color="rgba(245,158,11,0.5)"/></a>
-                {oStats.minTx&&<div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{oStats.minTx.date} · {oStats.minTx.sourceName}</div>}
+                {oStats.minTx&&<div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{oStats.minTx.date || oStats.minTx.dateTime || "—"} · {oStats.minTx.sourceName}</div>}
               </div>
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>交易记录</div>
@@ -351,10 +370,15 @@ export default function WatchDetail() {
                   <span style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",fontFamily:bd}}>{src.s.count} 笔</span>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px"}}>
-                  {[{l:"均价",v:src.s.avg},{l:"最高",v:src.s.max,lk:src.s.maxTx?.listingUrl},{l:"最低",v:src.s.min,lk:src.s.minTx?.listingUrl}].map((it,i)=>(
+                  {[
+                    {l:"均价",v:src.s.avg,date:null as string | null},
+                    {l:"最高",v:src.s.max,lk:src.s.maxTx?.listingUrl,date:src.s.maxTx?.date || src.s.maxTx?.dateTime || null},
+                    {l:"最低",v:src.s.min,lk:src.s.minTx?.listingUrl,date:src.s.minTx?.date || src.s.minTx?.dateTime || null},
+                  ].map((it,i)=>(
                     <div key={i}>
                       <div style={{fontSize:"9px",fontWeight:500,color:"rgba(255,255,255,0.25)",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:"3px",fontFamily:bd}}>{it.l}</div>
                       {it.lk?(<a href={it.lk} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{(it.v ?? 0).toLocaleString()}</a>):(<div style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{(it.v ?? 0).toLocaleString()}</div>)}
+                      {it.date && <div style={{fontSize:"9px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{it.date}</div>}
                     </div>
                   ))}
                 </div>
@@ -399,7 +423,7 @@ export default function WatchDetail() {
                   </div>
                   {/* Source badge — colored per source */}
                   <span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:"6px",fontSize:"11px",fontWeight:500,background:`${SOURCE_COLORS[tx.source]}18`,color:SOURCE_COLORS[tx.source]||"#888",fontFamily:bd,width:"fit-content"}}>{tx.sourceName}</span>
-                  <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.date ?? tx.dateTime ?? "—"}</span>
+                  <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.date || tx.dateTime || "—"}</span>
                   <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{(tx.price ?? 0).toLocaleString()}</span>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.condition}</span>
                   {/* Accessories — Box/Card badges matching screenshot style */}

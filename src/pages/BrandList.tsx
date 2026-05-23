@@ -6,26 +6,40 @@
  * 设计稿: ~/Downloads/raventik_brands.jsx
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { listBrands } from "../api/brands";
 import type { BrandSummary } from "../api/types";
 
 const hd = "'Instrument Serif','Noto Serif SC',serif";
 const bd = "'Barlow','Noto Sans SC',sans-serif";
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export default function BrandList() {
   const navigate = useNavigate();
   const [brands, setBrands] = useState<BrandSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [activeLetter, setActiveLetter] = useState<string>("ALL");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     listBrands()
       .then(r => setBrands(r.items ?? []))
       .catch(() => setErr("品牌列表加载失败"))
       .finally(() => setLoading(false));
+  }, []);
+
+  const filteredBrands = activeLetter === "ALL"
+    ? brands
+    : brands.filter(b => (b.name?.[0] || "").toUpperCase() === activeLetter);
+
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (scrollRef.current) {
+      e.preventDefault();
+      scrollRef.current.scrollLeft += e.deltaY * 2;
+    }
   }, []);
 
   return (
@@ -49,27 +63,19 @@ export default function BrandList() {
         .gp::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(180deg,rgba(255,255,255,0.35) 0%,rgba(255,255,255,0.1) 30%,rgba(255,255,255,0) 50%,rgba(255,255,255,0.1) 70%,rgba(255,255,255,0.35) 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
         .explore-link{display:flex;align-items:center;gap:4px;font-size:12px;color:rgba(255,255,255,0.3);transition:all 0.3s ease}
         .brand-card:hover .explore-link{color:rgba(255,255,255,0.7);transform:translateX(3px)}
-        .sc{background:rgba(255,255,255,0.04);box-shadow:inset 0 1px 1px rgba(255,255,255,0.08),0 1px 2px rgba(0,0,0,0.1);transition:box-shadow 0.2s}
-        .sc:focus-within{box-shadow:inset 0 1px 1px rgba(255,255,255,0.15),0 0 0 1px rgba(255,255,255,0.15),0 8px 40px rgba(0,0,0,0.3)}
-        .gs{background:rgba(255,255,255,0.06);background-blend-mode:luminosity;backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px);border-radius:9999px;box-shadow:4px 4px 4px rgba(0,0,0,0.05),inset 0 1px 1px rgba(255,255,255,0.2)}
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
+        .alpha-scroll{-ms-overflow-style:none;scrollbar-width:none}
+        .alpha-scroll::-webkit-scrollbar{display:none}
       `}</style>
 
       {/* ═══ NAV ═══ */}
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:50,padding:"12px 40px",background:"rgba(10,10,10,0.6)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",gap:"20px"}}>
-          <Link to="/" style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
+        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <Link to="/" style={{display:"flex",alignItems:"center",gap:"10px"}}>
             <img src="/logo/raventik_logo_nav_32.png" width={32} height={32} style={{borderRadius:"8px",objectFit:"contain"}} alt="Raventik"/>
             <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"20px",color:"#fff",letterSpacing:"-0.5px"}}>Raventik</span>
           </Link>
-          <form className="sc"
-                onSubmit={e => { e.preventDefault(); const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value.trim(); if (q) navigate(`/search?q=${encodeURIComponent(q)}`); }}
-                style={{flex:1,maxWidth:"560px",display:"flex",alignItems:"center",gap:"8px",padding:"4px 4px 4px 16px",borderRadius:"9999px"}}>
-            <Search size={16} color="rgba(255,255,255,0.35)"/>
-            <input name="q" type="text" placeholder="搜索品牌、型号或 Ref Number..." style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:"13px",fontWeight:300,color:"#fff",fontFamily:bd}}/>
-            <button type="submit" className="gs" style={{padding:"7px 16px",fontSize:"12px",fontWeight:500,color:"#fff",cursor:"pointer",border:"none",fontFamily:bd}}>搜索</button>
-          </form>
-          <div style={{display:"flex",alignItems:"center",gap:"4px",flexShrink:0}}>
+          <div className="gp" style={{display:"flex",alignItems:"center",gap:"2px",padding:"4px 6px"}}>
             {[
               { to: "/", label: "首页" },
               { to: "/brands", label: "品牌列表" },
@@ -78,7 +84,13 @@ export default function BrandList() {
             ].map(item => {
               const active = item.to === "/brands";
               return (
-                <Link key={item.to} to={item.to} style={{padding:"6px 12px",fontSize:"12px",fontWeight:400,color:active?"#fff":"rgba(255,255,255,0.6)",textDecoration:"none",borderRadius:"9999px",background:active?"rgba(255,255,255,0.08)":"transparent",fontFamily:bd}}>{item.label}</Link>
+                <Link key={item.to} to={item.to} style={{
+                  padding: "6px 12px", fontSize: "12px", fontWeight: 400,
+                  borderRadius: "9999px",
+                  color: active ? "#fff" : "rgba(255,255,255,0.7)",
+                  background: active ? "rgba(255,255,255,0.08)" : "transparent",
+                  textDecoration: "none", fontFamily: bd, transition: "all 0.2s",
+                }}>{item.label}</Link>
               );
             })}
           </div>
@@ -93,17 +105,82 @@ export default function BrandList() {
       {/* ═══ MAIN ═══ */}
       <main style={{maxWidth:"1280px",margin:"0 auto",padding:"100px 40px 60px",position:"relative",zIndex:1}}>
         {/* Header */}
-        <div style={{marginBottom:"48px"}}>
-          <div className="gp" style={{display:"inline-flex",padding:"4px 14px",fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.6)",marginBottom:"16px",letterSpacing:"1px",fontFamily:bd}}>品牌</div>
-          <h1 style={{fontFamily:"'Noto Serif SC',serif",fontSize:"clamp(32px,4vw,46px)",color:"#fff",letterSpacing:"-1px",lineHeight:1.1,fontWeight:700,marginBottom:"8px"}}>按品牌探索</h1>
-          <p style={{fontSize:"14px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>
-            {loading ? "加载中..." : err ? err : `覆盖 ${brands.length} 个主流品牌,跨平台历史交易数据聚合。`}
-          </p>
+        <div style={{marginBottom:"36px"}}>
+          <div style={{marginBottom:"16px"}}>
+            <div className="gp" style={{display:"inline-flex",padding:"4px 14px",fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.6)",marginBottom:"16px",letterSpacing:"1px",fontFamily:bd}}>品牌</div>
+            <h1 style={{fontFamily:"'Noto Serif SC',serif",fontSize:"clamp(32px,4vw,46px)",color:"#fff",letterSpacing:"-1px",lineHeight:1.1,fontWeight:700,marginBottom:"8px"}}>按品牌探索</h1>
+          </div>
+
+          {/* Subtitle + Alphabet filter — same line */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"20px"}}>
+            <p style={{fontSize:"14px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>
+              {loading ? "加载中..." : err ? err : `覆盖 ${brands.length} 个主流品牌,跨平台历史交易数据聚合。`}
+            </p>
+
+            {!loading && !err && brands.length > 0 && (
+              <div style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
+                {/* ALL — always visible */}
+                <button onClick={() => setActiveLetter("ALL")} style={{
+                  padding: "6px 14px", borderRadius: "8px", border: "none", cursor: "pointer",
+                  background: activeLetter === "ALL" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
+                  color: activeLetter === "ALL" ? "#fff" : "rgba(255,255,255,0.5)",
+                  fontSize: "12px", fontWeight: 600, fontFamily: hd, fontStyle: "italic",
+                  transition: "all 0.2s", flexShrink: 0,
+                  boxShadow: activeLetter === "ALL" ? "inset 0 1px 0 rgba(255,255,255,0.1)" : "none",
+                }}
+                onMouseEnter={e => { if (activeLetter !== "ALL") (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; }}
+                onMouseLeave={e => { if (activeLetter !== "ALL") (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.5)"; }}
+                >ALL</button>
+
+                <div style={{width:"1px",height:"20px",background:"rgba(255,255,255,0.1)",flexShrink:0}}/>
+
+                {/* A-Z carousel */}
+                <div style={{position:"relative",width:"340px",flexShrink:0}}>
+                  <div style={{position:"absolute",left:0,top:0,bottom:0,width:"28px",zIndex:2,background:"linear-gradient(to right,rgba(10,10,10,1) 0%,rgba(10,10,10,0.8) 40%,transparent 100%)",pointerEvents:"none",borderRadius:"10px 0 0 10px"}}/>
+                  <div style={{position:"absolute",right:0,top:0,bottom:0,width:"28px",zIndex:2,background:"linear-gradient(to left,rgba(10,10,10,1) 0%,rgba(10,10,10,0.8) 40%,transparent 100%)",pointerEvents:"none",borderRadius:"0 10px 10px 0"}}/>
+                  <div ref={scrollRef} onWheel={handleWheel} className="alpha-scroll" style={{
+                    display:"flex",alignItems:"center",gap:"1px",
+                    overflowX:"auto",scrollBehavior:"smooth",
+                    padding:"5px 24px",
+                    WebkitOverflowScrolling:"touch",
+                    background:"rgba(255,255,255,0.03)",borderRadius:"10px",
+                    border:"1px solid rgba(255,255,255,0.06)",
+                    boxShadow:"inset 0 1px 2px rgba(0,0,0,0.2),inset 0 -1px 1px rgba(255,255,255,0.04)",
+                  }}>
+                    {LETTERS.map(l => {
+                      const active = activeLetter === l;
+                      return (
+                        <button key={l} onClick={() => setActiveLetter(l)} style={{
+                          padding: "5px 0", borderRadius: "5px", border: "none", cursor: "pointer",
+                          background: active ? "rgba(255,255,255,0.15)" : "transparent",
+                          color: active ? "#fff" : "rgba(255,255,255,0.45)",
+                          fontSize: "13px", fontWeight: 600, fontFamily: hd, fontStyle: "italic",
+                          transition: "all 0.15s", width: "30px", textAlign: "center",
+                          flexShrink: 0,
+                          boxShadow: active ? "inset 0 1px 0 rgba(255,255,255,0.1)" : "none",
+                        }}
+                        onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; } }}
+                        onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.45)"; (e.currentTarget as HTMLElement).style.background = "transparent"; } }}
+                        >{l}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Active filter indicator */}
+          {activeLetter !== "ALL" && (
+            <div style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,marginTop:"12px"}}>
+              "{activeLetter}" 开头 · {filteredBrands.length} 个品牌
+            </div>
+          )}
         </div>
 
-        {!loading && !err && brands.length > 0 && (
+        {!loading && !err && filteredBrands.length > 0 && (
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"28px 24px"}}>
-            {brands.map((brand) => {
+            {filteredBrands.map((brand) => {
               const nameLen = brand.name.length;
               const nameSize = nameLen > 16 ? "20px" : nameLen > 10 ? "24px" : "28px";
               return (
@@ -135,6 +212,12 @@ export default function BrandList() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {!loading && !err && brands.length > 0 && filteredBrands.length === 0 && (
+          <div style={{padding:"60px 20px",textAlign:"center",color:"rgba(255,255,255,0.4)",fontFamily:bd,fontSize:"13px"}}>
+            没有以 "{activeLetter}" 开头的品牌
           </div>
         )}
       </main>
