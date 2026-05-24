@@ -61,14 +61,24 @@ function SrcLogo({ source }) {
   );
 }
 
-function PriceChart({ data, visible }) {
+function PriceChart({ data, visible, hasOlderData, currentPeriod, onExpandPeriod }: { data: any[]; visible: any[]; hasOlderData?: boolean; currentPeriod?: string; onExpandPeriod?: () => void }) {
   const W = 720, H = 280, pX = 70, pY = 24;
   const cW = W - pX - 30, cH = H - pY * 2;
   const all = data.flatMap(d => visible.map(s => d[s]).filter(v => typeof v === "number" && isFinite(v)));
   if (!all.length) {
     return (
-      <div style={{height:"260px",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.3)",fontSize:"13px",fontFamily:"Barlow,sans-serif"}}>
-        暂无该时段成交价数据
+      <div style={{height:"260px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px",color:"rgba(255,255,255,0.4)",fontSize:"13px",fontFamily:"Barlow,sans-serif"}}>
+        <div>{hasOlderData ? `${currentPeriod ?? "当前"} 内无成交,但更早时段有数据` : "暂无该时段成交价数据"}</div>
+        {hasOlderData && onExpandPeriod && (
+          <button onClick={onExpandPeriod} style={{
+            padding:"7px 16px",borderRadius:"9999px",border:"1px solid rgba(255,255,255,0.15)",cursor:"pointer",
+            background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:"12px",fontWeight:500,fontFamily:"Barlow,sans-serif",
+            transition:"all 0.2s ease",
+          }}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)"}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)"}}
+          >查看全部时段</button>
+        )}
       </div>
     );
   }
@@ -405,7 +415,7 @@ export default function WatchDetail() {
             </div>
 
             {/* Chart view */}
-            {vm==="chart"&&<div style={{padding:"20px 24px 24px"}}><PriceChart data={pData} visible={visSrc}/></div>}
+            {vm==="chart"&&<div style={{padding:"20px 24px 24px"}}><PriceChart data={pData} visible={visSrc} hasOlderData={tw !== "All" && (oStats.count ?? 0) > 0 && pData.length === 0} currentPeriod={tw} onExpandPeriod={() => { setTw("All"); setTxPg(1); }}/></div>}
 
             {/* List view — matches screenshot: 图/来源/日期/成交价/成色/配件/材质/表盘色/Ref/链接 */}
             {/* API: GET /api/watches/:ref/transactions?period={tw}&page=&limit= */}
@@ -413,6 +423,20 @@ export default function WatchDetail() {
               <div style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"10px 24px",gap:"8px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
                 {["","来源","拍卖日期","成交价 (JPY)","成色","配件","材质","表盘色","Ref",""].map((h,i)=>(<span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>))}
               </div>
+              {txPD.length === 0 && (
+                <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px",color:"rgba(255,255,255,0.4)",fontSize:"13px",fontFamily:bd}}>
+                  <div>{tw !== "All" && (oStats.count ?? 0) > 0 ? `${tw} 内无成交,但更早时段有 ${oStats.count} 笔` : "暂无该时段成交记录"}</div>
+                  {tw !== "All" && (oStats.count ?? 0) > 0 && (
+                    <button onClick={()=>{setTw("All");setTxPg(1)}} style={{
+                      padding:"7px 16px",borderRadius:"9999px",border:"1px solid rgba(255,255,255,0.15)",cursor:"pointer",
+                      background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:"12px",fontWeight:500,fontFamily:bd,transition:"all 0.2s ease",
+                    }}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.12)"}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.06)"}}
+                    >查看全部时段</button>
+                  )}
+                </div>
+              )}
               {txPD.map((tx,i)=>(
                 <div key={tx.id} className="tr" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail — tx.thumbUrl (mongo product_image_url) */}
