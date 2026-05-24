@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ArrowUpRight, TrendingUp, TrendingDown, ChevronRight, Eye, BarChart3, Globe, Database, Clock, Star, ArrowRight, X } from "lucide-react";
+import { Search, TrendingUp, TrendingDown, ChevronRight, Eye, BarChart3, Globe, Database, Clock, Star, ArrowRight, X } from "lucide-react";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { truncate20 } from "../lib/labels";
 import UserMenu from "../components/UserMenu";
@@ -499,25 +499,23 @@ export default function RaventikCN() {
         }} />
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           <div style={{ marginBottom: "48px" }}>
-            <div className="gp" style={{ display: "inline-flex", padding: "4px 14px", fontSize: "11px", fontWeight: 500, color: "rgba(255,255,255,0.6)", marginBottom: "16px", letterSpacing: "1px", fontFamily: body }}>使用方式</div>
             <h2 style={{ fontFamily: "'Noto Serif SC', serif", fontSize: "clamp(32px, 4vw, 46px)", color: "#fff", letterSpacing: "-1px", lineHeight: 1.1, fontWeight: 700 }}>
               三步，看清全貌。
             </h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
             {[
-              { step: "01", title: "搜索", desc: "输入任意品牌、型号或 Ref Number。同时查询四大平台的全部在售信息。", icon: Search },
-              { step: "02", title: "比价", desc: "价格、成色、卖家、地区——所有 listings 并排呈现，最优选一目了然。", icon: Eye },
-              { step: "03", title: "追踪", desc: "加入关注列表，设定目标价。价格变动或新上架时，即时提醒。", icon: TrendingUp },
+              { title: "搜索", desc: "输入任意品牌、型号或 Ref Number。同时查询四大平台的全部在售信息。", icon: Search },
+              { title: "比价", desc: "价格、成色、卖家、地区——所有 listings 并排呈现，最优选一目了然。", icon: Eye },
+              { title: "追踪", desc: "加入关注列表，设定目标价。价格变动或新上架时，即时提醒。", icon: TrendingUp },
             ].map((item, i) => {
               const Icon = item.icon;
               return (
                 <div key={i} className="gc" style={{ padding: "36px 28px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", marginBottom: "20px" }}>
                     <div className="gs" style={{ width: "40px", height: "40px", borderRadius: "9999px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Icon size={16} color="#fff" strokeWidth={1.5} />
                     </div>
-                    <span style={{ fontFamily: heading, fontStyle: "italic", fontSize: "14px", color: "rgba(255,255,255,0.3)" }}>{item.step}</span>
                   </div>
                   <h3 style={{ fontFamily: "'Noto Serif SC', serif", fontSize: "26px", color: "#fff", fontWeight: 700, marginBottom: "10px" }}>{item.title}</h3>
                   <p style={{ fontSize: "13px", fontWeight: 300, color: "rgba(255,255,255,0.45)", lineHeight: 1.8, fontFamily: body }}>{item.desc}</p>
@@ -541,22 +539,11 @@ export default function RaventikCN() {
             fontFamily: "'Noto Serif SC', serif", fontSize: "clamp(36px, 5vw, 52px)", color: "#fff",
             fontWeight: 700, lineHeight: 1.15, marginBottom: "16px",
           }}>
-            别再为溢价买单。<br />从这里开始。
+            别再为溢价买单。<br />从 Raventik 开始。
           </h2>
           <p style={{ fontSize: "14px", fontWeight: 300, color: "rgba(255,255,255,0.45)", marginBottom: "32px", lineHeight: 1.8, fontFamily: body }}>
             加入数千名表友和经销商的行列，用 Raventik 找到对的表、对的价格。
           </p>
-          <div style={{ display: "flex", justifyContent: "center", gap: "12px" }}>
-            <button className="gs cb" style={{
-              padding: "12px 28px", fontSize: "14px", fontWeight: 500, color: "#fff",
-              cursor: "pointer", border: "none", display: "flex", alignItems: "center", gap: "6px", fontFamily: body,
-            }}>获取早期访问 <ArrowUpRight size={15} /></button>
-            <button className="cb" style={{
-              padding: "12px 28px", fontSize: "14px", fontWeight: 500,
-              color: "#0a0a0a", background: "#fff", borderRadius: "9999px",
-              cursor: "pointer", border: "none", fontFamily: body,
-            }}>查看演示</button>
-          </div>
         </div>
       </section>
 
