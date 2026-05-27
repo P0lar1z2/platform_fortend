@@ -23,7 +23,8 @@
  * ============================================================
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { Clock, Search, ChevronRight, ChevronDown, Save, Plus, Info, Bookmark } from "lucide-react";
 import { fetchConfig, updateConfig as apiUpdateConfig } from "../api/config";
@@ -60,26 +61,34 @@ const INITIAL_CONFIG = {
 // ─── Field Component ─────────────────────────────────────
 function ConfigField({ label, value, onChange, suffix = "", prefix = "", placeholder = "", readOnly = false, hint = "", tooltip = "" }) {
   const bd = "'Barlow','Noto Sans SC',sans-serif";
-  const [showTip, setShowTip] = useState(false);
+  // tooltip 用 portal 渲染到 body + position:fixed，避免被 .gc 卡片的 overflow:hidden 裁切。
+  const tipRef = useRef<HTMLDivElement>(null);
+  const [tipPos, setTipPos] = useState<{ top: number; left: number } | null>(null);
+  const openTip = () => {
+    const el = tipRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setTipPos({ top: r.top - 6, left: r.left + r.width / 2 });
+  };
   return (
     <div style={{ marginBottom: "16px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <span style={{ fontSize: "12px", fontWeight: 400, color: "rgba(255,255,255,0.5)", fontFamily: bd }}>{label}</span>
           {tooltip && (
-            <div style={{ position: "relative", display: "inline-flex" }}
-              onMouseEnter={() => setShowTip(true)}
-              onMouseLeave={() => setShowTip(false)}
+            <div ref={tipRef} style={{ position: "relative", display: "inline-flex" }}
+              onMouseEnter={openTip}
+              onMouseLeave={() => setTipPos(null)}
             >
               <Info size={12} color="rgba(255,255,255,0.2)" style={{ cursor: "help" }} />
-              {showTip && (
+              {tipPos && createPortal(
                 <div style={{
-                  position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)",
+                  position: "fixed", top: `${tipPos.top}px`, left: `${tipPos.left}px`, transform: "translate(-50%, -100%)",
                   width: "220px", padding: "10px 12px", borderRadius: "10px",
                   background: "rgba(30,30,30,0.95)", border: "1px solid rgba(255,255,255,0.1)",
                   boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
                   fontSize: "11px", fontWeight: 300, color: "rgba(255,255,255,0.6)", fontFamily: bd,
-                  lineHeight: 1.5, zIndex: 10, pointerEvents: "none",
+                  lineHeight: 1.5, zIndex: 9999, pointerEvents: "none",
                 }}>
                   {tooltip}
                   <div style={{
@@ -87,7 +96,7 @@ function ConfigField({ label, value, onChange, suffix = "", prefix = "", placeho
                     width: "8px", height: "8px", background: "rgba(30,30,30,0.95)",
                     borderRight: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)",
                   }} />
-                </div>
+                </div>, document.body
               )}
             </div>
           )}
