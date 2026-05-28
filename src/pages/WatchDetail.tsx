@@ -24,8 +24,8 @@ import WatchlistToggle from "../components/WatchlistToggle";
 import { DATA_SOURCES as SHARED_DATA_SOURCES, DATA_SOURCE_BY_KEY } from "../lib/constants";
 import { decisionMeta, valuationLevelLabel } from "../lib/labels";
 import { fetchPriceRange, postValuation } from "../api/valuations";
-import { fetchWatch, fetchMarket } from "../api/watches";
-import type { ValuationResponse, WatchInfo, MarketResponse, Period } from "../api/types";
+import { fetchWatch, fetchMarket, fetchTransactions } from "../api/watches";
+import type { ValuationResponse, WatchInfo, MarketResponse, MarketTransactionsPage, Period } from "../api/types";
 
 // 数据源集中配置在 lib/constants.ts，新增源只改那里
 const DATA_SOURCES = SHARED_DATA_SOURCES;
@@ -127,7 +127,10 @@ export default function WatchDetail() {
   const [vm, setVm] = useState("chart");
   const [visSrc, setVisSrc] = useState(DATA_SOURCES.map(s => s.key));
   const [txPg, setTxPg] = useState(1);
+  const [txPage, setTxPage] = useState<MarketTransactionsPage | null>(null);
+  const [txLoading, setTxLoading] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
+  const txPP = 10;
 
   useEffect(() => {
     setWatch(null); setWatchError(null);
@@ -143,6 +146,17 @@ export default function WatchDetail() {
       .catch(() => setMarket(null))
       .finally(() => setMarketLoading(false));
   }, [ref, tw]);
+
+  // Transactions are fetched independently so page nav doesn't re-trigger
+  // chart/aggregate work. period/ref change resets to page 1 above; this
+  // effect then runs on (ref, tw, txPg).
+  useEffect(() => {
+    setTxLoading(true);
+    fetchTransactions(ref, tw, txPg, txPP)
+      .then(setTxPage)
+      .catch(() => setTxPage(null))
+      .finally(() => setTxLoading(false));
+  }, [ref, tw, txPg]);
 
   // ── Section C: Trading Valuation ──
   const [inputMode, setInputMode] = useState("price");    // "price" = input buy price, "margin" = input target margin
@@ -189,11 +203,22 @@ export default function WatchDetail() {
     };
   });
   const pData = market?.chart?.points ?? [];
-  const fTx = market?.transactions ?? [];
-
-  const txPP = 10;
-  const txTP = Math.max(1, Math.ceil(fTx.length / txPP));
-  const txPD = fTx.slice((txPg - 1) * txPP, txPg * txPP);
+  const txTotal = txPage?.total ?? 0;
+  const txTP = Math.max(1, txPage?.totalPages ?? 1);
+  const txPD = txPage?.transactions ?? [];
+  // Ellipsis pagination: always show first/last + a window of ±1 around current,
+  // collapse gaps to "…". For small totals (≤7 pages) just list every page.
+  const txPageItems: Array<number | "…"> = (() => {
+    if (txTP <= 7) return Array.from({ length: txTP }, (_, i) => i + 1);
+    const items: Array<number | "…"> = [1];
+    const left = Math.max(2, txPg - 1);
+    const right = Math.min(txTP - 1, txPg + 1);
+    if (left > 2) items.push("…");
+    for (let p = left; p <= right; p++) items.push(p);
+    if (right < txTP - 1) items.push("…");
+    items.push(txTP);
+    return items;
+  })();
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: bd }}>
@@ -406,7 +431,7 @@ export default function WatchDetail() {
                   {DATA_SOURCES.map(s=>(<button key={s.key} className="sb" onClick={()=>setVisSrc(p=>p.includes(s.key)?p.filter(x=>x!==s.key):[...p,s.key])} style={{background:visSrc.includes(s.key)?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.02)",color:visSrc.includes(s.key)?(SOURCE_COLORS[s.key]||"#888"):"rgba(255,255,255,0.2)",fontFamily:bd,boxShadow:visSrc.includes(s.key)?`inset 0 0 0 1px ${SOURCE_COLORS[s.key]}33`:"none"}}>
                     <span style={{display:"inline-block",width:"7px",height:"7px",borderRadius:"50%",background:visSrc.includes(s.key)?(SOURCE_COLORS[s.key]||"#888"):"rgba(255,255,255,0.1)",marginRight:"5px"}}/>{s.name}
                   </button>))}
-                </>):(<span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>共 {fTx.length} 笔交易记录</span>)}
+                </>):(<span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>共 {txTotal} 笔交易记录{txLoading && txTotal>0 ? " · 加载中" : ""}</span>)}
               </div>
               <div style={{display:"flex",gap:"4px"}}>
                 <button className="mb" onClick={()=>setVm("chart")} style={{background:vm==="chart"?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)"}}><BarChart3 size={16} color={vm==="chart"?"#fff":"rgba(255,255,255,0.4)"}/></button>
@@ -418,7 +443,7 @@ export default function WatchDetail() {
             {vm==="chart"&&<div style={{padding:"20px 24px 24px"}}><PriceChart data={pData} visible={visSrc} hasOlderData={tw !== "All" && (oStats.count ?? 0) > 0 && pData.length === 0} currentPeriod={tw} onExpandPeriod={() => { setTw("All"); setTxPg(1); }}/></div>}
 
             {/* List view — matches screenshot: 图/来源/日期/成交价/成色/配件/材质/表盘色/Ref/链接 */}
-            {/* API: GET /api/watches/:ref/transactions?period={tw}&page=&limit= */}
+            {/* API: GET /api/watches/:ref/transactions?period={tw}&page=&page_size= */}
             {vm==="list"&&(<>
               <div style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"10px 24px",gap:"8px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
                 {["","来源","拍卖日期","成交价 (JPY)","成色","配件","材质","表盘色","Ref",""].map((h,i)=>(<span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>))}
@@ -464,9 +489,12 @@ export default function WatchDetail() {
                 </div>
               ))}
               {txTP>1&&(<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",padding:"16px"}}>
-                <button className="pb" onClick={()=>setTxPg(p=>Math.max(1,p-1))} style={{background:"rgba(255,255,255,0.04)",color:txPg===1?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronLeft size={14}/></button>
-                {Array.from({length:txTP},(_,i)=>i+1).map(p=>(<button key={p} className="pb" onClick={()=>setTxPg(p)} style={{background:p===txPg?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:p===txPg?"#fff":"rgba(255,255,255,0.5)",fontFamily:bd}}>{p}</button>))}
-                <button className="pb" onClick={()=>setTxPg(p=>Math.min(txTP,p+1))} style={{background:"rgba(255,255,255,0.04)",color:txPg===txTP?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronRight size={14}/></button>
+                <button className="pb" onClick={()=>setTxPg(p=>Math.max(1,p-1))} disabled={txPg===1} style={{background:"rgba(255,255,255,0.04)",color:txPg===1?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)",cursor:txPg===1?"default":"pointer"}}><ChevronLeft size={14}/></button>
+                {txPageItems.map((it,i)=> it==="…"
+                  ? <span key={`e${i}`} style={{padding:"0 6px",fontSize:"12px",color:"rgba(255,255,255,0.3)",fontFamily:bd}}>…</span>
+                  : <button key={it} className="pb" onClick={()=>setTxPg(it)} style={{background:it===txPg?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:it===txPg?"#fff":"rgba(255,255,255,0.5)",fontFamily:bd}}>{it}</button>
+                )}
+                <button className="pb" onClick={()=>setTxPg(p=>Math.min(txTP,p+1))} disabled={txPg===txTP} style={{background:"rgba(255,255,255,0.04)",color:txPg===txTP?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)",cursor:txPg===txTP?"default":"pointer"}}><ChevronRight size={14}/></button>
               </div>)}
             </>)}
           </div>

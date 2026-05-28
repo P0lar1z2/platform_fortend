@@ -1,5 +1,5 @@
 import { apiClient, API_MOCK } from "./client";
-import type { WatchInfo, MarketResponse, Period } from "./types";
+import type { WatchInfo, MarketResponse, MarketTransactionsPage, Period } from "./types";
 
 export async function fetchWatch(ref: string): Promise<WatchInfo> {
   if (!API_MOCK) {
@@ -18,6 +18,22 @@ export async function fetchMarket(ref: string, period: Period): Promise<MarketRe
     return data;
   }
   return MOCK_MARKET(period);
+}
+
+export async function fetchTransactions(
+  ref: string,
+  period: Period,
+  page: number,
+  pageSize: number,
+): Promise<MarketTransactionsPage> {
+  if (!API_MOCK) {
+    const { data } = await apiClient.get<MarketTransactionsPage>(
+      `/watches/${encodeURIComponent(ref)}/transactions`,
+      { params: { period, page, page_size: pageSize } },
+    );
+    return data;
+  }
+  return { period, windowDays: 90, page, pageSize, total: 0, totalPages: 0, transactions: [] };
 }
 
 function MOCK_WATCH(ref: string): WatchInfo {
@@ -66,6 +82,5 @@ function MOCK_MARKET(period: Period): MarketResponse {
       { key: "ecoauc", name: "EcoAuc", avg: 1567808, max: 1788875, min: 1028295, count: 10 },
     ],
     chart: { granularity, points },
-    transactions: [],
   };
 }

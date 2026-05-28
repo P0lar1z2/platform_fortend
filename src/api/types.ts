@@ -154,6 +154,15 @@ export interface MarketResponse {
   overall: MarketOverall;
   perSource: MarketPerSource[];
   chart: MarketChart;
+}
+
+export interface MarketTransactionsPage {
+  period: Period;
+  windowDays: number;
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
   transactions: MarketTx[];
 }
 
