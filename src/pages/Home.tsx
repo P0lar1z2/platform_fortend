@@ -4,6 +4,7 @@ import { Search, TrendingUp, TrendingDown, ChevronRight, Eye, BarChart3, Globe, 
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { truncate20 } from "../lib/labels";
 import UserMenu from "../components/UserMenu";
+import BrandSelect from "../components/BrandSelect";
 
 // ─── MOCK DATA ───────────────────────────────────────────
 const STATS = [
@@ -112,6 +113,7 @@ function PriceDistribution() {
 // ─── MAIN ────────────────────────────────────────────────
 export default function RaventikCN() {
   const [searchValue, setSearchValue] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("全部");
   const [logoHover, setLogoHover] = useState(false);
   const [hoveredHistory, setHoveredHistory] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -119,9 +121,12 @@ export default function RaventikCN() {
 
   const submitSearch = (q: string) => {
     const term = q.trim();
-    if (!term) return;
-    pushHistory(term);
-    navigate(`/search?q=${encodeURIComponent(term)}`);
+    if (!term && selectedBrand === "全部") return;
+    if (term) pushHistory(term);
+    const next = new URLSearchParams();
+    if (term) next.set("q", term);
+    if (selectedBrand !== "全部") next.set("brand", selectedBrand);
+    navigate(`/search?${next.toString()}`);
   };
 
   useEffect(() => {
@@ -393,7 +398,9 @@ export default function RaventikCN() {
             display: "flex", alignItems: "center", gap: "10px",
             padding: "6px 6px 6px 20px",
             borderRadius: "9999px",
+            overflow: "visible",
           }}>
+            <BrandSelect value={selectedBrand} onChange={setSelectedBrand} fontFamily={body} />
             <Search size={18} color="rgba(255,255,255,0.35)" />
             <input type="text" placeholder="输入品牌、型号或 Ref Number..."
               value={searchValue} onChange={e => setSearchValue(e.target.value)}
