@@ -216,6 +216,7 @@ export default function ConfigPage() {
               { to: "/", label: "首页" },
               { to: "/brands", label: "品牌列表" },
               { to: "/config", label: "配置表" },
+              { to: "/accounts", label: "账号管理" },
               { to: "/watchlist", label: "关注列表" },
             ].map(item => {
               const active = item.to === "/config";

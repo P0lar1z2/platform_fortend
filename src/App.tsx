@@ -8,6 +8,7 @@ import BrandModels from "./pages/BrandModels";
 import BrandList from "./pages/BrandList";
 import Watchlist from "./pages/Watchlist";
 import Config from "./pages/Config";
+import AccountManagement from "./pages/AccountManagement";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/brands/:slug" element={<BrandModels />} />
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/config" element={<Config />} />
+          <Route path="/accounts" element={<AccountManagement />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<Navigate to="/" replace />} />

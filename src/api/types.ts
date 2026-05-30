@@ -235,3 +235,29 @@ export interface ConfigDoc {
   sources: ConfigSource[];
   global: ConfigGlobal;
 }
+
+// ─── Goofish 账号管理 ──────────────────────────────────
+
+export interface GoofishAccount {
+  account: string;
+  status?: string;       // DB 持久状态：logged_in / anonymous / unknown
+  liveStatus?: string;   // 内存会话状态：pending / need_face / expired / error...
+  unb?: string | null;
+  updatedAt?: number | null;  // epoch 秒
+}
+
+export interface GoofishStatus {
+  account: string;
+  status: string;
+  qrcode?: string | null;     // 登录二维码 base64(png)
+  faceQrcode?: string | null; // 人脸验证二维码 base64(png)
+  unb?: string | null;
+}
+
+export interface GoofishCookie {
+  account: string;
+  unb: string;
+  tracknick?: string | null;
+  mtopCookie: string;
+  cookies: Array<{ name: string; value: string; [k: string]: unknown }>;
+}
