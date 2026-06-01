@@ -17,15 +17,15 @@
  * ============================================================
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Clock, ChevronRight, ChevronLeft, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, Search } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, Search } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
 import { DATA_SOURCES as SHARED_DATA_SOURCES, DATA_SOURCE_BY_KEY } from "../lib/constants";
 import { decisionMeta, valuationLevelLabel } from "../lib/labels";
 import { fetchPriceRange, postValuation } from "../api/valuations";
 import { fetchWatch, fetchMarket, fetchTransactions } from "../api/watches";
-import type { ValuationResponse, WatchInfo, MarketResponse, MarketTransactionsPage, Period } from "../api/types";
+import type { ValuationResponse, WatchInfo, MarketResponse, MarketTransactionsPage, MarketTx, Period } from "../api/types";
 
 // 数据源集中配置在 lib/constants.ts，新增源只改那里
 const DATA_SOURCES = SHARED_DATA_SOURCES;
@@ -35,6 +35,9 @@ const SOURCE_COLORS: Record<string, string> = Object.fromEntries(
 void DATA_SOURCE_BY_KEY;
 
 const TIME_WINDOWS: Period[] = ["1M", "3M", "6M", "1Y", "All"];
+type TxSortField = "date" | "price";
+type TxSortDir = "asc" | "desc";
+type TxSort = { field: TxSortField; dir: TxSortDir };
 
 /* ─── COMPONENTS ────────────────────────────────────────── */
 
@@ -109,6 +112,53 @@ function PriceChart({ data, visible, hasOlderData, currentPeriod, onExpandPeriod
   );
 }
 
+function SortHeader({
+  active,
+  dir,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  dir: TxSortDir;
+  label: string;
+  onClick: () => void;
+}) {
+  const Icon = !active ? ArrowUpDown : dir === "asc" ? ChevronUp : ChevronDown;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`${label}排序`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        width: "fit-content",
+        padding: 0,
+        border: "none",
+        background: "transparent",
+        cursor: "pointer",
+        color: active ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.3)",
+        fontSize: "10px",
+        fontWeight: 500,
+        letterSpacing: "0.8px",
+        fontFamily: "'Barlow','Noto Sans SC',sans-serif",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span>{label}</span>
+      <Icon size={12} strokeWidth={2} />
+    </button>
+  );
+}
+
+function txSortValue(tx: MarketTx, field: TxSortField): number {
+  if (field === "price") return Number.isFinite(tx.price) ? tx.price : Number.NEGATIVE_INFINITY;
+  const rawDate = tx.dateTime || tx.date || "";
+  const time = rawDate ? new Date(rawDate).getTime() : Number.NaN;
+  return Number.isFinite(time) ? time : Number.NEGATIVE_INFINITY;
+}
+
 /* ─── MAIN ──────────────────────────────────────────────── */
 
 export default function WatchDetail() {
@@ -129,6 +179,7 @@ export default function WatchDetail() {
   const [txPg, setTxPg] = useState(1);
   const [txPage, setTxPage] = useState<MarketTransactionsPage | null>(null);
   const [txLoading, setTxLoading] = useState(false);
+  const [txSort, setTxSort] = useState<TxSort | null>(null);
   const [imgIdx, setImgIdx] = useState(0);
   const txPP = 10;
 
@@ -152,11 +203,11 @@ export default function WatchDetail() {
   // effect then runs on (ref, tw, txPg).
   useEffect(() => {
     setTxLoading(true);
-    fetchTransactions(ref, tw, txPg, txPP)
+    fetchTransactions(ref, tw, txPg, txPP, txSort?.field, txSort?.dir)
       .then(setTxPage)
       .catch(() => setTxPage(null))
       .finally(() => setTxLoading(false));
-  }, [ref, tw, txPg]);
+  }, [ref, tw, txPg, txSort]);
 
   // ── Section C: Trading Valuation ──
   const [inputMode, setInputMode] = useState("price");    // "price" = input buy price, "margin" = input target margin
@@ -206,6 +257,26 @@ export default function WatchDetail() {
   const txTotal = txPage?.total ?? 0;
   const txTP = Math.max(1, txPage?.totalPages ?? 1);
   const txPD = txPage?.transactions ?? [];
+  const sortedTxPD = useMemo(() => {
+    if (!txSort) return txPD;
+    const direction = txSort.dir === "asc" ? 1 : -1;
+    return [...txPD].sort((a, b) => {
+      const av = txSortValue(a, txSort.field);
+      const bv = txSortValue(b, txSort.field);
+      const avMissing = av === Number.NEGATIVE_INFINITY;
+      const bvMissing = bv === Number.NEGATIVE_INFINITY;
+      if (avMissing !== bvMissing) return avMissing ? 1 : -1;
+      if (av !== bv) return (av - bv) * direction;
+      return (a.id || "").localeCompare(b.id || "");
+    });
+  }, [txPD, txSort]);
+  function toggleTxSort(field: TxSortField) {
+    setTxSort(prev => {
+      const nextDir: TxSortDir = prev?.field === field && prev.dir === "desc" ? "asc" : "desc";
+      return { field, dir: nextDir };
+    });
+    setTxPg(1);
+  }
   // Ellipsis pagination: always show first/last + a window of ±1 around current,
   // collapse gaps to "…". For small totals (≤7 pages) just list every page.
   const txPageItems: Array<number | "…"> = (() => {
@@ -446,7 +517,11 @@ export default function WatchDetail() {
             {/* API: GET /api/watches/:ref/transactions?period={tw}&page=&page_size= */}
             {vm==="list"&&(<>
               <div style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"10px 24px",gap:"8px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
-                {["","来源","拍卖日期","成交价 (JPY)","成色","配件","材质","表盘色","Ref",""].map((h,i)=>(<span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>))}
+                <span />
+                <span style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>来源</span>
+                <SortHeader active={txSort?.field === "date"} dir={txSort?.field === "date" ? txSort.dir : "desc"} label="拍卖日期" onClick={() => toggleTxSort("date")} />
+                <SortHeader active={txSort?.field === "price"} dir={txSort?.field === "price" ? txSort.dir : "desc"} label="成交价 (JPY)" onClick={() => toggleTxSort("price")} />
+                {["成色","配件","材质","表盘色","Ref",""].map((h,i)=>(<span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>))}
               </div>
               {txPD.length === 0 && (
                 <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px",color:"rgba(255,255,255,0.4)",fontSize:"13px",fontFamily:bd}}>
@@ -462,7 +537,7 @@ export default function WatchDetail() {
                   )}
                 </div>
               )}
-              {txPD.map((tx,i)=>(
+              {sortedTxPD.map((tx,i)=>(
                 <div key={tx.id} className="tr" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail — tx.thumbUrl (mongo product_image_url) */}
                   <div style={{width:"32px",height:"32px",borderRadius:"6px",overflow:"hidden",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
