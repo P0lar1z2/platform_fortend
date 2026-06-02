@@ -4,9 +4,9 @@ Updated: 2026-06-02
 
 ## Active Branch
 
-- Branch: `Hao+brand-search-sorting`
+- Branch: `brand-model-page-jump`
 - Base lineage: `refactor/frontend`
-- Remote branch: `origin/Hao+brand-search-sorting`
+- Remote branch: `origin/brand-model-page-jump`
 
 ## Completed And Verified
 
@@ -30,6 +30,13 @@ Updated: 2026-06-02
 - Verified in the browser: list headers render on entry and both toggle
   directions still work.
 - Saved in commit `45e0d81`.
+
+### Brand Model Manual Page Jump
+
+- Added a compact page-number input and jump button to brand-model pagination.
+- Supports Enter submission and clamps out-of-range values to a valid page.
+- Verified with Omega: `3` jumps to page 3 and `9999` clamps to page `506`.
+- Saved in commit `fecb820`.
 
 ## Blocked
 
