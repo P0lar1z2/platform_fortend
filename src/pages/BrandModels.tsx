@@ -165,6 +165,8 @@ export default function BrandModels() {
 
         .pg-btn{transition:all 0.2s ease;cursor:pointer;display:flex;align-items:center;justify-content:center;min-width:32px;height:32px;border-radius:8px;border:none;font-size:12px}
         .pg-btn:hover{background:rgba(255,255,255,0.12)}
+        .page-jump-input{-moz-appearance:textfield}
+        .page-jump-input::-webkit-inner-spin-button,.page-jump-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
@@ -359,6 +361,7 @@ export default function BrandModels() {
             <form onSubmit={e=>{e.preventDefault();submitPageJump()}} style={{display:"flex",alignItems:"center",gap:"4px",marginLeft:"8px"}}>
               <input
                 type="number"
+                className="page-jump-input"
                 min={1}
                 value={pageJump}
                 onChange={e=>setPageJump(e.target.value)}
