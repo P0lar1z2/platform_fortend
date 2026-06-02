@@ -261,3 +261,61 @@ export interface GoofishCookie {
   mtopCookie: string;
   cookies: Array<{ name: string; value: string; [k: string]: unknown }>;
 }
+
+// ─── Goofish 订阅与通知测试 ───────────────────────────
+
+export interface GoofishSellerSubscription {
+  _id?: string;
+  seller_id: string;
+  seller_name?: string | null;
+  note?: string | null;
+  enabled: boolean;
+  crawl_interval_minutes: number;
+  last_crawled_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoofishRefSubscription {
+  _id?: string;
+  reference: string;
+  brand?: string | null;
+  keyword: string;
+  note?: string | null;
+  enabled: boolean;
+  crawl_interval_minutes: number;
+  last_crawled_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoofishItem {
+  _id?: string;
+  item_id: string;
+  seller_id?: string | null;
+  title: string;
+  raw_price?: string | null;
+  price_cny?: number | null;
+  source_url: string;
+  images: string[];
+  status: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  detail_requested_at?: string | null;
+  processed_at?: string | null;
+}
+
+export interface GoofishOpportunity {
+  _id?: string;
+  item_id: string;
+  seller_id?: string | null;
+  title: string;
+  source_url: string;
+  matched_reference?: string | null;
+  brand?: string | null;
+  estimated_revenue?: number | null;
+  total_cost?: number | null;
+  profit_margin?: number | null;
+  decision: string;
+  created_at: string;
+}

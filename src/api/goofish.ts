@@ -1,5 +1,13 @@
 import { apiClient, API_MOCK } from "./client";
-import type { GoofishAccount, GoofishStatus, GoofishCookie } from "./types";
+import type {
+  GoofishAccount,
+  GoofishCookie,
+  GoofishItem,
+  GoofishOpportunity,
+  GoofishRefSubscription,
+  GoofishSellerSubscription,
+  GoofishStatus,
+} from "./types";
 
 // backend 统一信封：{ success, data, error }
 interface Envelope<T> {
@@ -21,6 +29,33 @@ const MOCK_QR =
 const MOCK_ACCOUNTS: GoofishAccount[] = [
   { account: "demo_a", status: "logged_in", liveStatus: undefined, unb: "2200000001", updatedAt: 1717000000 },
   { account: "demo_b", status: "anonymous", liveStatus: "pending", unb: null, updatedAt: 1716900000 },
+];
+
+const MOCK_SELLER_SUBSCRIPTIONS: GoofishSellerSubscription[] = [
+  {
+    seller_id: "demo_seller_001",
+    seller_name: "demo seller",
+    note: "mock",
+    enabled: true,
+    crawl_interval_minutes: 60,
+    last_crawled_at: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+const MOCK_REF_SUBSCRIPTIONS: GoofishRefSubscription[] = [
+  {
+    reference: "124300",
+    brand: "Rolex",
+    keyword: "Rolex 124300",
+    note: "mock",
+    enabled: true,
+    crawl_interval_minutes: 60,
+    last_crawled_at: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
 ];
 
 function normalizeStatus(account: string, d: any): GoofishStatus {
@@ -95,4 +130,118 @@ export async function refreshAccount(account: string): Promise<GoofishStatus> {
 export async function deleteAccount(account: string): Promise<void> {
   if (API_MOCK) return;
   await apiClient.delete("/v1/goofish/account", { params: { account } });
+}
+
+export async function listSellerSubscriptions(): Promise<GoofishSellerSubscription[]> {
+  if (API_MOCK) return MOCK_SELLER_SUBSCRIPTIONS;
+  const { data } = await apiClient.get<{ subscriptions: GoofishSellerSubscription[] }>("/v1/goofish/seller-subscriptions");
+  return data.subscriptions ?? [];
+}
+
+export async function upsertSellerSubscription(input: {
+  seller_id: string;
+  seller_name?: string;
+  note?: string;
+  enabled?: boolean;
+  crawl_interval_minutes?: number;
+}): Promise<GoofishSellerSubscription> {
+  if (API_MOCK) {
+    return {
+      ...MOCK_SELLER_SUBSCRIPTIONS[0],
+      ...input,
+      enabled: input.enabled ?? true,
+      crawl_interval_minutes: input.crawl_interval_minutes ?? 60,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+  const { data } = await apiClient.post<{ subscription: GoofishSellerSubscription }>("/v1/goofish/seller-subscriptions", input);
+  return data.subscription;
+}
+
+export async function setSellerSubscriptionEnabled(sellerId: string, enabled: boolean): Promise<GoofishSellerSubscription> {
+  if (API_MOCK) return { ...MOCK_SELLER_SUBSCRIPTIONS[0], seller_id: sellerId, enabled };
+  const { data } = await apiClient.patch<{ subscription: GoofishSellerSubscription }>(
+    `/v1/goofish/seller-subscriptions/${encodeURIComponent(sellerId)}`,
+    { enabled }
+  );
+  return data.subscription;
+}
+
+export async function deleteSellerSubscription(sellerId: string): Promise<void> {
+  if (API_MOCK) return;
+  await apiClient.delete(`/v1/goofish/seller-subscriptions/${encodeURIComponent(sellerId)}`);
+}
+
+export async function triggerSellerSubscription(sellerId: string): Promise<{ request_id: string }> {
+  if (API_MOCK) return { request_id: `mock-seller-${sellerId}` };
+  const { data } = await apiClient.post<{ request_id: string }>(
+    `/v1/goofish/seller-subscriptions/${encodeURIComponent(sellerId)}/trigger`,
+    { pages: 1 }
+  );
+  return data;
+}
+
+export async function listRefSubscriptions(): Promise<GoofishRefSubscription[]> {
+  if (API_MOCK) return MOCK_REF_SUBSCRIPTIONS;
+  const { data } = await apiClient.get<{ subscriptions: GoofishRefSubscription[] }>("/v1/goofish/ref-subscriptions");
+  return data.subscriptions ?? [];
+}
+
+export async function upsertRefSubscription(input: {
+  reference: string;
+  brand?: string;
+  keyword?: string;
+  note?: string;
+  enabled?: boolean;
+  crawl_interval_minutes?: number;
+}): Promise<GoofishRefSubscription> {
+  if (API_MOCK) {
+    return {
+      ...MOCK_REF_SUBSCRIPTIONS[0],
+      ...input,
+      keyword: input.keyword || [input.brand, input.reference].filter(Boolean).join(" "),
+      enabled: input.enabled ?? true,
+      crawl_interval_minutes: input.crawl_interval_minutes ?? 60,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+  const { data } = await apiClient.post<{ subscription: GoofishRefSubscription }>("/v1/goofish/ref-subscriptions", input);
+  return data.subscription;
+}
+
+export async function setRefSubscriptionEnabled(reference: string, enabled: boolean): Promise<GoofishRefSubscription> {
+  if (API_MOCK) return { ...MOCK_REF_SUBSCRIPTIONS[0], reference, enabled };
+  const { data } = await apiClient.patch<{ subscription: GoofishRefSubscription }>(
+    `/v1/goofish/ref-subscriptions/${encodeURIComponent(reference)}`,
+    { enabled }
+  );
+  return data.subscription;
+}
+
+export async function deleteRefSubscription(reference: string): Promise<void> {
+  if (API_MOCK) return;
+  await apiClient.delete(`/v1/goofish/ref-subscriptions/${encodeURIComponent(reference)}`);
+}
+
+export async function triggerRefSubscription(reference: string): Promise<{ request_id: string; keyword?: string }> {
+  if (API_MOCK) return { request_id: `mock-ref-${reference}`, keyword: reference };
+  const { data } = await apiClient.post<{ request_id: string; keyword?: string }>(
+    `/v1/goofish/ref-subscriptions/${encodeURIComponent(reference)}/trigger`,
+    { pages: 1 }
+  );
+  return data;
+}
+
+export async function listGoofishItems(): Promise<GoofishItem[]> {
+  if (API_MOCK) return [];
+  const { data } = await apiClient.get<{ items: GoofishItem[] }>("/v1/goofish/items");
+  return data.items ?? [];
+}
+
+export async function listGoofishOpportunities(): Promise<GoofishOpportunity[]> {
+  if (API_MOCK) return [];
+  const { data } = await apiClient.get<{ opportunities: GoofishOpportunity[] }>("/v1/goofish/opportunities");
+  return data.opportunities ?? [];
 }
