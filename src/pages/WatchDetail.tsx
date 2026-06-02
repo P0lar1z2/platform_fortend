@@ -174,7 +174,7 @@ export default function WatchDetail() {
   const [marketLoading, setMarketLoading] = useState(true);
 
   const [tw, setTw] = useState<Period>("3M");
-  const [vm, setVm] = useState("chart");
+  const [vm, setVm] = useState("list");
   const [visSrc, setVisSrc] = useState(DATA_SOURCES.map(s => s.key));
   const [txPg, setTxPg] = useState(1);
   const [txPage, setTxPage] = useState<MarketTransactionsPage | null>(null);
