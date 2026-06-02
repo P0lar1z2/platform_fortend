@@ -18,7 +18,7 @@
  * ============================================================
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
@@ -102,6 +102,8 @@ export default function BrandModels() {
       family: familyFilter === "全部" ? undefined : familyFilter,
       page: currentPage,
       size: PER_PAGE,
+      sort_by: "transactions",
+      sort_dir: "desc",
     })
       .then(d => setDetail(d))
       .catch(() => setDetail(null))
@@ -109,10 +111,16 @@ export default function BrandModels() {
   }, [effectiveSlug, familyFilter, currentPage]);
 
   const families = ["全部", ...(detail?.families ?? [])];
-  const pageData: WatchListItem[] = detail?.watches.items ?? [];
   const total = detail?.watches.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(currentPage, totalPages);
+  const pageData: WatchListItem[] = useMemo(
+    () => [...(detail?.watches.items ?? [])].sort((a, b) => {
+      const byTransactions = (b.transactions ?? 0) - (a.transactions ?? 0);
+      return byTransactions || a.ref.localeCompare(b.ref);
+    }),
+    [detail?.watches.items],
+  );
 
   const goPage = (p: number) => { setCurrentPage(Math.max(1, Math.min(p, totalPages))); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
