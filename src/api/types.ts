@@ -266,6 +266,7 @@ export interface GoofishCookie {
 
 export interface GoofishSellerSubscription {
   _id?: string;
+  owner_user_id?: string;
   seller_id: string;
   seller_name?: string | null;
   note?: string | null;
@@ -278,6 +279,7 @@ export interface GoofishSellerSubscription {
 
 export interface GoofishRefSubscription {
   _id?: string;
+  owner_user_id?: string;
   reference: string;
   brand?: string | null;
   keyword: string;
@@ -307,6 +309,9 @@ export interface GoofishItem {
 
 export interface GoofishOpportunity {
   _id?: string;
+  owner_user_id?: string;
+  subscription_kind?: "seller" | "ref" | null;
+  subscription_key?: string | null;
   item_id: string;
   seller_id?: string | null;
   title: string;
@@ -318,4 +323,15 @@ export interface GoofishOpportunity {
   profit_margin?: number | null;
   decision: string;
   created_at: string;
+}
+
+export interface LarkBindCode {
+  code: string;
+  expires_at: string;
+}
+
+export interface LarkBindingStatus {
+  bound: boolean;
+  open_id_suffix?: string | null;
+  updated_at?: string | null;
 }

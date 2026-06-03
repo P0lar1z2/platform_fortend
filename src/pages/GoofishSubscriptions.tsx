@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, PauseCircle, PlayCircle, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Bell, Copy, MessageCircle, PauseCircle, PlayCircle, Plus, RefreshCw, Trash2, Unlink } from "lucide-react";
 import { useToast } from "../components/Toast";
 import {
+  createLarkBindCode,
+  deleteLarkBinding,
   deleteRefSubscription,
   deleteSellerSubscription,
+  getLarkBindingStatus,
   listGoofishItems,
   listGoofishOpportunities,
   listRefSubscriptions,
@@ -21,6 +24,8 @@ import type {
   GoofishOpportunity,
   GoofishRefSubscription,
   GoofishSellerSubscription,
+  LarkBindCode,
+  LarkBindingStatus,
 } from "../api/types";
 
 const nav = [
@@ -51,6 +56,8 @@ export default function GoofishSubscriptions() {
   const [refs, setRefs] = useState<GoofishRefSubscription[]>([]);
   const [items, setItems] = useState<GoofishItem[]>([]);
   const [opportunities, setOpportunities] = useState<GoofishOpportunity[]>([]);
+  const [larkBinding, setLarkBinding] = useState<LarkBindingStatus | null>(null);
+  const [bindCode, setBindCode] = useState<LarkBindCode | null>(null);
   const [sellerForm, setSellerForm] = useState({ seller_id: "", seller_name: "", interval: "60", note: "" });
   const [refForm, setRefForm] = useState({ reference: "", brand: "", keyword: "", interval: "60", note: "" });
   const [loading, setLoading] = useState(true);
@@ -65,10 +72,12 @@ export default function GoofishSubscriptions() {
         listGoofishItems(),
         listGoofishOpportunities(),
       ]);
+      const larkData = await getLarkBindingStatus().catch(() => null);
       setSellers(sellerData);
       setRefs(refData);
       setItems(itemData);
       setOpportunities(opportunityData);
+      setLarkBinding(larkData);
     } catch (e: any) {
       push(e?.response?.data?.error || "加载闲鱼订阅失败", "error");
     } finally {
@@ -77,6 +86,43 @@ export default function GoofishSubscriptions() {
   }, [push]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function generateBindCode() {
+    setBusy("lark:bind-code");
+    try {
+      const code = await createLarkBindCode();
+      setBindCode(code);
+      push("Lark 绑定码已生成", "success");
+    } catch (e: any) {
+      push(e?.response?.data?.error || e?.message || "生成 Lark 绑定码失败", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function copyBindCode() {
+    if (!bindCode?.code) return;
+    try {
+      await navigator.clipboard.writeText(bindCode.code);
+      push("绑定码已复制", "success");
+    } catch {
+      push("复制失败，请手动选择绑定码", "warning");
+    }
+  }
+
+  async function unlinkLark() {
+    setBusy("lark:unlink");
+    try {
+      await deleteLarkBinding();
+      setBindCode(null);
+      await load();
+      push("Lark 绑定已解除", "success");
+    } catch (e: any) {
+      push(e?.response?.data?.error || e?.message || "解除 Lark 绑定失败", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function addSeller() {
     const sellerId = sellerForm.seller_id.trim();
@@ -211,6 +257,11 @@ export default function GoofishSubscriptions() {
         .gf-title p{margin:0;color:rgba(255,255,255,.55);font-size:13px}
         .gf-action{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.07);color:#fff;cursor:pointer}
         .gf-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+        .lark-panel{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;margin-bottom:18px;padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.035)}
+        .lark-meta{display:flex;align-items:center;gap:10px;min-width:0}
+        .lark-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:rgba(147,197,253,.14);color:#bfdbfe}
+        .code-box{display:flex;align-items:center;gap:8px;min-width:0;margin-top:8px}
+        .code-text{display:block;max-width:420px;padding:7px 9px;border-radius:8px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.08);font-family:'JetBrains Mono','SFMono-Regular',monospace;font-size:12px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         .panel{border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.035);overflow:hidden}
         .panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
         .panel-head h2{font-size:15px;font-weight:600;margin:0}
@@ -231,7 +282,7 @@ export default function GoofishSubscriptions() {
         .item-row{display:grid;grid-template-columns:72px 1fr 110px 120px;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.055);font-size:13px}
         .thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:rgba(255,255,255,.06)}
         .link{color:#93c5fd;text-decoration:none}
-        @media (max-width:900px){.gf-grid{grid-template-columns:1fr}.row,.item-row{grid-template-columns:1fr}.icon-actions{justify-content:flex-start}.gf-nav-links{display:none}.form{grid-template-columns:1fr}}
+        @media (max-width:900px){.gf-grid,.lark-panel{grid-template-columns:1fr}.row,.item-row{grid-template-columns:1fr}.icon-actions{justify-content:flex-start}.gf-nav-links{display:none}.form{grid-template-columns:1fr}.code-text{max-width:100%}}
       `}</style>
 
       <nav className="gf-nav">
@@ -256,6 +307,31 @@ export default function GoofishSubscriptions() {
           </div>
           <button className="gf-action" onClick={load} disabled={loading}><RefreshCw size={15} /> 刷新</button>
         </div>
+
+        <section className="lark-panel">
+          <div className="lark-meta">
+            <span className="lark-icon"><MessageCircle size={18} /></span>
+            <div>
+              <div>Lark 私聊通知 <Status enabled={Boolean(larkBinding?.bound)} /></div>
+              <div className="muted">
+                {larkBinding?.bound
+                  ? `已绑定 open_id *${larkBinding.open_id_suffix || "-"} · ${fmt(larkBinding.updated_at)}`
+                  : "未绑定，生成绑定码后私发给机器人"}
+              </div>
+              {bindCode ? (
+                <div className="code-box">
+                  <span className="code-text">{bindCode.code}</span>
+                  <button className="icon-btn" onClick={copyBindCode} title="复制绑定码"><Copy size={16} /></button>
+                  <span className="muted">有效期至 {fmt(bindCode.expires_at)}</span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="icon-actions">
+            <button className="gf-action" onClick={generateBindCode} disabled={busy === "lark:bind-code"}><Plus size={15} /> 绑定码</button>
+            <button className="icon-btn" onClick={unlinkLark} disabled={!larkBinding?.bound || busy === "lark:unlink"} title="解除绑定"><Unlink size={16} /></button>
+          </div>
+        </section>
 
         <div className="gf-grid">
           <section className="panel">
@@ -330,7 +406,7 @@ export default function GoofishSubscriptions() {
             {opportunities.length === 0 ? <div className="item-row muted">暂无机会记录</div> : opportunities.slice(0, 20).map(item => (
               <div className="item-row" key={`${item.item_id}-${item.created_at}`}>
                 <div className="muted">{item.decision}</div>
-                <div><a className="link" href={item.source_url} target="_blank" rel="noreferrer">{item.title}</a><div className="muted">item {item.item_id}</div></div>
+                <div><a className="link" href={item.source_url} target="_blank" rel="noreferrer">{item.title}</a><div className="muted">item {item.item_id} · {item.subscription_kind || "-"} {item.subscription_key || ""}</div></div>
                 <div>{item.profit_margin ?? "-"}</div>
                 <div className="muted">{fmt(item.created_at)}</div>
               </div>

@@ -7,6 +7,8 @@ import type {
   GoofishRefSubscription,
   GoofishSellerSubscription,
   GoofishStatus,
+  LarkBindCode,
+  LarkBindingStatus,
 } from "./types";
 
 // backend 统一信封：{ success, data, error }
@@ -57,6 +59,12 @@ const MOCK_REF_SUBSCRIPTIONS: GoofishRefSubscription[] = [
     updated_at: new Date().toISOString(),
   },
 ];
+
+const MOCK_LARK_BINDING: LarkBindingStatus = {
+  bound: false,
+  open_id_suffix: null,
+  updated_at: null,
+};
 
 function normalizeStatus(account: string, d: any): GoofishStatus {
   d = d ?? {};
@@ -244,4 +252,29 @@ export async function listGoofishOpportunities(): Promise<GoofishOpportunity[]> 
   if (API_MOCK) return [];
   const { data } = await apiClient.get<{ opportunities: GoofishOpportunity[] }>("/v1/goofish/opportunities");
   return data.opportunities ?? [];
+}
+
+export async function getLarkBindingStatus(): Promise<LarkBindingStatus> {
+  if (API_MOCK) return MOCK_LARK_BINDING;
+  const { data } = await apiClient.get<Envelope<LarkBindingStatus>>("/v1/lark/binding");
+  if (!data.success || !data.data) throw new Error(data.error || "get Lark binding failed");
+  return data.data;
+}
+
+export async function createLarkBindCode(): Promise<LarkBindCode> {
+  if (API_MOCK) {
+    return {
+      code: "mock_LarkBindCode_1234567890",
+      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    };
+  }
+  const { data } = await apiClient.post<Envelope<LarkBindCode>>("/v1/lark/bind-code");
+  if (!data.success || !data.data) throw new Error(data.error || "create Lark bind code failed");
+  return data.data;
+}
+
+export async function deleteLarkBinding(): Promise<void> {
+  if (API_MOCK) return;
+  const { data } = await apiClient.delete<Envelope<{ disabled: boolean }>>("/v1/lark/binding");
+  if (!data.success) throw new Error(data.error || "delete Lark binding failed");
 }
