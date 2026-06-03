@@ -12,6 +12,7 @@ import AccountManagement from "./pages/AccountManagement";
 import GoofishSubscriptions from "./pages/GoofishSubscriptions";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ExternalListingRedirect from "./pages/ExternalListingRedirect";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/goofish-subscriptions" element={<GoofishSubscriptions />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/external-listing" element={<ExternalListingRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

@@ -18,9 +18,9 @@
  * ============================================================
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X } from "lucide-react";
+import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
 import WatchlistToggle from "../components/WatchlistToggle";
 import { getBrand } from "../api/brands";
@@ -83,6 +83,7 @@ export default function BrandModels() {
   const { slug } = useParams<{ slug: string }>();
   const [viewMode, setViewMode] = useViewPreference<"card" | "list">("brand-view", "card");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageJump, setPageJump] = useState("1");
   const [familyFilter, setFamilyFilter] = useState("全部");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -102,6 +103,8 @@ export default function BrandModels() {
       family: familyFilter === "全部" ? undefined : familyFilter,
       page: currentPage,
       size: PER_PAGE,
+      sort_by: "transactions",
+      sort_dir: "desc",
     })
       .then(d => setDetail(d))
       .catch(() => setDetail(null))
@@ -109,12 +112,26 @@ export default function BrandModels() {
   }, [effectiveSlug, familyFilter, currentPage]);
 
   const families = ["全部", ...(detail?.families ?? [])];
-  const pageData: WatchListItem[] = detail?.watches.items ?? [];
   const total = detail?.watches.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(currentPage, totalPages);
+  const pageData: WatchListItem[] = useMemo(
+    () => [...(detail?.watches.items ?? [])].sort((a, b) => {
+      const byTransactions = (b.transactions ?? 0) - (a.transactions ?? 0);
+      return byTransactions || a.ref.localeCompare(b.ref);
+    }),
+    [detail?.watches.items],
+  );
 
   const goPage = (p: number) => { setCurrentPage(Math.max(1, Math.min(p, totalPages))); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  useEffect(() => { setPageJump(String(page)); }, [page]);
+
+  const submitPageJump = () => {
+    const requestedPage = Number(pageJump);
+    if (!Number.isFinite(requestedPage)) return;
+    goPage(Math.trunc(requestedPage));
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: bd }}>
@@ -148,6 +165,8 @@ export default function BrandModels() {
 
         .pg-btn{transition:all 0.2s ease;cursor:pointer;display:flex;align-items:center;justify-content:center;min-width:32px;height:32px;border-radius:8px;border:none;font-size:12px}
         .pg-btn:hover{background:rgba(255,255,255,0.12)}
+        .page-jump-input{-moz-appearance:textfield}
+        .page-jump-input::-webkit-inner-spin-button,.page-jump-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
@@ -339,6 +358,27 @@ export default function BrandModels() {
                 : <button key={p} className="pg-btn" onClick={()=>goPage(p)} style={{background:p===page?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.04)",color:p===page?"#fff":"rgba(255,255,255,0.5)",fontFamily:bd}}>{p}</button>
             ))}
             <button className="pg-btn" onClick={()=>goPage(page+1)} disabled={page===totalPages} style={{background:"rgba(255,255,255,0.04)",color:page===totalPages?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronRight size={16}/></button>
+            <form onSubmit={e=>{e.preventDefault();submitPageJump()}} style={{display:"flex",alignItems:"center",gap:"4px",marginLeft:"8px"}}>
+              <input
+                type="number"
+                className="page-jump-input"
+                min={1}
+                value={pageJump}
+                onChange={e=>setPageJump(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();submitPageJump()}}}
+                aria-label="跳转页码"
+                title={`输入页码，范围 1-${totalPages}`}
+                style={{
+                  width:"64px",height:"32px",padding:"0 8px",borderRadius:"8px",
+                  border:"1px solid rgba(255,255,255,0.08)",outline:"none",
+                  background:"rgba(255,255,255,0.04)",color:"#fff",fontFamily:bd,
+                  fontSize:"12px",textAlign:"center",
+                }}
+              />
+              <button type="submit" className="pg-btn" title="跳转到指定页" aria-label="跳转到指定页" style={{background:"rgba(255,255,255,0.04)",color:"rgba(255,255,255,0.6)"}}>
+                <CornerDownRight size={15}/>
+              </button>
+            </form>
           </div>
         )}
       </main>
