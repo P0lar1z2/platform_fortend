@@ -435,7 +435,7 @@ export default function GoofishSubscriptions() {
             {items.length === 0 ? <div className="item-row muted">暂无商品</div> : items.slice(0, 20).map(item => (
               <div className="item-row" key={item.item_id}>
                 {item.images?.[0] ? <img className="thumb" src={item.images[0]} alt="" /> : <div className="thumb" />}
-                <div><a className="link" href={item.source_url} target="_blank" rel="noreferrer">{item.title}</a><div className="muted">item {item.item_id} · seller {item.seller_id || "-"}</div></div>
+                <div className="item-main"><a className="link" href={item.source_url} target="_blank" rel="noreferrer">{item.title}</a><div className="muted">item {item.item_id}</div></div>
                 <div>{item.raw_price || (item.price_cny ? `${item.price_cny}` : "-")}</div>
                 <div className="muted">{fmt(item.first_seen_at)}</div>
               </div>
