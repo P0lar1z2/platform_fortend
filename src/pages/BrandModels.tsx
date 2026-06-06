@@ -19,10 +19,11 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
 import WatchlistToggle from "../components/WatchlistToggle";
+import AppHeader from "../components/AppHeader";
 import { getBrand } from "../api/brands";
 import type { BrandDetail, WatchListItem } from "../api/types";
 import { buildPageList } from "../utils/pagination";
@@ -171,35 +172,7 @@ export default function BrandModels() {
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
 
-      {/* ═══ NAV ═══ */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:50,padding:"12px 40px",background:"rgba(10,10,10,0.6)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <Link to="/" style={{display:"flex",alignItems:"center",gap:"10px"}}>
-            <img src="/logo/raventik_logo_nav_32.png" width={32} height={32}
-                 style={{borderRadius:"8px",objectFit:"contain"}} alt="Raventik"/>
-            <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"20px",color:"#fff",letterSpacing:"-0.5px"}}>Raventik</span>
-          </Link>
-          <div className="gp" style={{display:"flex",alignItems:"center",gap:"2px",padding:"4px 6px"}}>
-            {[
-              { to: "/", label: "首页" },
-              { to: "/brands", label: "品牌列表" },
-              { to: "/config", label: "配置表" },
-              { to: "/watchlist", label: "关注列表" },
-            ].map(item => {
-              const active = item.to === "/brands";
-              return (
-                <Link key={item.to} to={item.to} style={{
-                  padding: "6px 12px", fontSize: "12px", fontWeight: 400,
-                  borderRadius: "9999px",
-                  color: active ? "#fff" : "rgba(255,255,255,0.7)",
-                  background: active ? "rgba(255,255,255,0.08)" : "transparent",
-                  textDecoration: "none", fontFamily: bd, transition: "all 0.2s",
-                }}>{item.label}</Link>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
+      <AppHeader />
 
       {/* Ambient */}
       <div style={{position:"fixed",top:0,left:"15%",width:"600px",height:"500px",background:"radial-gradient(ellipse,rgba(80,120,200,0.07) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>

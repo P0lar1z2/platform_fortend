@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Bell, Copy, MessageCircle, PauseCircle, PlayCircle, Plus, RefreshCw, Trash2, Unlink } from "lucide-react";
 import { useToast } from "../components/Toast";
+import AppHeader from "../components/AppHeader";
 import {
   createLarkBindCode,
   deleteLarkBinding,
@@ -28,18 +28,49 @@ import type {
   LarkBindingStatus,
 } from "../api/types";
 
-const nav = [
-  { to: "/", label: "首页" },
-  { to: "/brands", label: "品牌列表" },
-  { to: "/config", label: "配置表" },
-  { to: "/accounts", label: "账号管理" },
-  { to: "/goofish-subscriptions", label: "闲鱼订阅" },
-  { to: "/watchlist", label: "关注列表" },
-];
+type DateLike = string | number | { $date?: string | number | { $numberLong?: string } } | null | undefined;
 
-function fmt(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("zh-CN");
+function normalizeDateValue(value: DateLike): string | number | null {
+  if (!value) return null;
+  if (typeof value === "string" || typeof value === "number") return value;
+  const bsonDate = value.$date;
+  if (typeof bsonDate === "string" || typeof bsonDate === "number") return bsonDate;
+  if (bsonDate?.$numberLong) return Number(bsonDate.$numberLong);
+  return null;
+}
+
+function fmt(value?: DateLike) {
+  const normalized = normalizeDateValue(value);
+  if (normalized === null) return "-";
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("zh-CN");
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall through to the legacy copy path below.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  try {
+    return document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 function Status({ enabled }: { enabled: boolean }) {
@@ -102,10 +133,9 @@ export default function GoofishSubscriptions() {
 
   async function copyBindCode() {
     if (!bindCode?.code) return;
-    try {
-      await navigator.clipboard.writeText(bindCode.code);
+    if (await copyText(bindCode.code)) {
       push("绑定码已复制", "success");
-    } catch {
+    } else {
       push("复制失败，请手动选择绑定码", "warning");
     }
   }
@@ -245,12 +275,6 @@ export default function GoofishSubscriptions() {
     <div className="gf-page">
       <style>{`
         .gf-page{min-height:100vh;background:#090909;color:#fff;font-family:'Barlow','Noto Sans SC',sans-serif}
-        .gf-nav{position:fixed;top:0;left:0;right:0;z-index:50;padding:12px 40px;background:rgba(9,9,9,.72);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.07)}
-        .gf-nav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:20px}
-        .gf-logo{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
-        .gf-nav-links{display:flex;align-items:center;gap:4px;margin-left:auto}
-        .gf-nav-links a{padding:6px 12px;border-radius:999px;color:rgba(255,255,255,.58);text-decoration:none;font-size:12px}
-        .gf-nav-links a.active{background:rgba(255,255,255,.09);color:#fff}
         .gf-main{max-width:1180px;margin:0 auto;padding:96px 40px 56px}
         .gf-top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}
         .gf-title h1{font-size:32px;font-weight:500;margin:0 0 8px}
@@ -282,22 +306,10 @@ export default function GoofishSubscriptions() {
         .item-row{display:grid;grid-template-columns:72px 1fr 110px 120px;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.055);font-size:13px}
         .thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:rgba(255,255,255,.06)}
         .link{color:#93c5fd;text-decoration:none}
-        @media (max-width:900px){.gf-grid,.lark-panel{grid-template-columns:1fr}.row,.item-row{grid-template-columns:1fr}.icon-actions{justify-content:flex-start}.gf-nav-links{display:none}.form{grid-template-columns:1fr}.code-text{max-width:100%}}
+        @media (max-width:900px){.gf-grid,.lark-panel{grid-template-columns:1fr}.row,.item-row{grid-template-columns:1fr}.icon-actions{justify-content:flex-start}.form{grid-template-columns:1fr}.code-text{max-width:100%}}
       `}</style>
 
-      <nav className="gf-nav">
-        <div className="gf-nav-inner">
-          <Link className="gf-logo" to="/">
-            <img src="/logo/raventik_logo_nav_32.png" width={32} height={32} style={{ borderRadius: 8 }} alt="Raventik" />
-            <span>Raventik</span>
-          </Link>
-          <div className="gf-nav-links">
-            {nav.map(item => (
-              <Link key={item.to} to={item.to} className={item.to === "/goofish-subscriptions" ? "active" : ""}>{item.label}</Link>
-            ))}
-          </div>
-        </div>
-      </nav>
+      <AppHeader />
 
       <main className="gf-main">
         <div className="gf-top">

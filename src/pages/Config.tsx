@@ -25,10 +25,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate } from "react-router-dom";
-import { Clock, Search, ChevronRight, ChevronDown, Save, Plus, Info, Bookmark } from "lucide-react";
+import { Clock, ChevronRight, ChevronDown, Save, Plus, Info, Bookmark } from "lucide-react";
 import { fetchConfig, updateConfig as apiUpdateConfig } from "../api/config";
 import { useToast } from "../components/Toast";
+import AppHeader from "../components/AppHeader";
 
 // ─── MOCK: Platform configs ──────────────────────────────
 // API: GET /api/config/platforms
@@ -130,7 +130,6 @@ function ConfigField({ label, value, onChange, suffix = "", prefix = "", placeho
 
 // ─── MAIN ────────────────────────────────────────────────
 export default function ConfigPage() {
-  const navigate = useNavigate();
   const toast = useToast();
   const [platforms, setPlatforms] = useState<any[]>(INITIAL_PLATFORMS);
   const [config, setConfig] = useState<Record<string, any>>(INITIAL_CONFIG);
@@ -196,37 +195,7 @@ export default function ConfigPage() {
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
 
-      {/* ═══ NAV ═══ */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:50,padding:"12px 40px",background:"rgba(10,10,10,0.6)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",gap:"20px"}}>
-          <Link to="/" style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
-            <img src="/logo/raventik_logo_nav_32.png" width={32} height={32}
-                 style={{borderRadius:"8px",objectFit:"contain"}} alt="Raventik"/>
-            <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"20px",color:"#fff",letterSpacing:"-0.5px"}}>Raventik</span>
-          </Link>
-          <form className="sc"
-                onSubmit={e => { e.preventDefault(); const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value.trim(); if (q) navigate(`/search?q=${encodeURIComponent(q)}`); }}
-                style={{flex:1,maxWidth:"560px",display:"flex",alignItems:"center",gap:"8px",padding:"4px 4px 4px 16px",borderRadius:"9999px"}}>
-            <Search size={16} color="rgba(255,255,255,0.35)"/>
-            <input name="q" type="text" placeholder="搜索品牌、型号或 Ref Number..." style={{flex:1,background:"transparent",border:"none",outline:"none",fontSize:"13px",fontWeight:300,color:"#fff",fontFamily:bd}}/>
-            <button type="submit" className="gs" style={{padding:"7px 16px",fontSize:"12px",fontWeight:500,color:"#fff",cursor:"pointer",border:"none",fontFamily:bd}}>搜索</button>
-          </form>
-          <div style={{display:"flex",alignItems:"center",gap:"4px",flexShrink:0}}>
-            {[
-              { to: "/", label: "首页" },
-              { to: "/brands", label: "品牌列表" },
-              { to: "/config", label: "配置表" },
-              { to: "/accounts", label: "账号管理" },
-              { to: "/watchlist", label: "关注列表" },
-            ].map(item => {
-              const active = item.to === "/config";
-              return (
-                <Link key={item.to} to={item.to} style={{padding:"6px 12px",fontSize:"12px",fontWeight:400,color:active?"#fff":"rgba(255,255,255,0.6)",textDecoration:"none",borderRadius:"9999px",background:active?"rgba(255,255,255,0.08)":"transparent",fontFamily:bd}}>{item.label}</Link>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
+      <AppHeader showSearch />
 
       {/* Ambient */}
       <div style={{position:"fixed",top:0,left:"10%",width:"600px",height:"500px",background:"radial-gradient(ellipse,rgba(80,120,200,0.06) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>

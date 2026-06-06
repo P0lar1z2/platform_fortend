@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { Link } from "react-router-dom";
 import { Key, LogIn, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useToast } from "../components/Toast";
+import AppHeader from "../components/AppHeader";
 import {
   deleteAccount,
   getCookie,
@@ -15,15 +15,6 @@ import type { GoofishAccount, GoofishCookie, GoofishStatus } from "../api/types"
 
 const bd = "'Barlow','Noto Sans SC',sans-serif";
 const hd = "'Instrument Serif','Noto Serif SC',serif";
-
-const NAV = [
-  { to: "/", label: "首页" },
-  { to: "/brands", label: "品牌列表" },
-  { to: "/config", label: "配置表" },
-  { to: "/accounts", label: "账号管理" },
-  { to: "/goofish-subscriptions", label: "闲鱼订阅" },
-  { to: "/watchlist", label: "关注列表" },
-];
 
 function statusColor(s?: string): string {
   if (!s) return "rgba(255,255,255,0.4)";
@@ -174,24 +165,7 @@ export default function AccountManagement() {
         .row:hover{background:rgba(255,255,255,0.03)}
       `}</style>
 
-      {/* NAV */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, padding: "12px 40px", background: "rgba(10,10,10,0.6)", backdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", gap: 20 }}>
-          <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            <img src="/logo/raventik_logo_nav_32.png" width={32} height={32} style={{ borderRadius: 8, objectFit: "contain" }} alt="Raventik" />
-            <span style={{ fontFamily: hd, fontStyle: "italic", fontSize: 20, color: "#fff", letterSpacing: "-0.5px" }}>Raventik</span>
-          </Link>
-          <div style={{ flex: 1 }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-            {NAV.map(item => {
-              const active = item.to === "/accounts";
-              return (
-                <Link key={item.to} to={item.to} style={{ padding: "6px 12px", fontSize: 12, fontWeight: 400, color: active ? "#fff" : "rgba(255,255,255,0.6)", textDecoration: "none", borderRadius: 9999, background: active ? "rgba(255,255,255,0.08)" : "transparent", fontFamily: bd }}>{item.label}</Link>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
+      <AppHeader />
 
       <main style={{ maxWidth: 960, margin: "0 auto", padding: "100px 40px 60px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 28 }}>
