@@ -81,6 +81,28 @@ function Status({ enabled }: { enabled: boolean }) {
   );
 }
 
+function decisionLabel(decision?: string | null): string {
+  switch (decision) {
+    case "buy": return "买入机会";
+    case "alert": return "关注机会";
+    case "skip": return "跳过";
+    case "insufficient_data": return "数据不足";
+    case "pending": return "待评估";
+    default: return decision || "-";
+  }
+}
+
+function decisionClass(decision?: string | null): string {
+  switch (decision) {
+    case "buy": return "buy";
+    case "alert": return "alert";
+    case "skip": return "skip";
+    case "insufficient_data": return "insufficient";
+    case "pending": return "pending";
+    default: return "unknown";
+  }
+}
+
 export default function GoofishSubscriptions() {
   const { push } = useToast();
   const [sellers, setSellers] = useState<GoofishSellerSubscription[]>([]);
@@ -304,6 +326,15 @@ export default function GoofishSubscriptions() {
         .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:rgba(255,255,255,.72);cursor:pointer}
         .section{margin-top:18px}
         .item-row{display:grid;grid-template-columns:72px 1fr 110px 120px;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.055);font-size:13px}
+        .opportunity-row{grid-template-columns:96px minmax(0,1fr) 86px 132px}
+        .item-main{min-width:0}
+        .item-main .link{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .decision-badge{display:inline-flex;align-items:center;justify-content:center;width:72px;height:24px;border-radius:999px;font-size:12px;font-weight:600}
+        .decision-badge.buy{background:rgba(16,185,129,.16);color:#34d399}
+        .decision-badge.alert{background:rgba(245,158,11,.16);color:#fbbf24}
+        .decision-badge.skip{background:rgba(148,163,184,.12);color:#94a3b8}
+        .decision-badge.insufficient{background:rgba(96,165,250,.14);color:#93c5fd}
+        .decision-badge.pending,.decision-badge.unknown{background:rgba(255,255,255,.08);color:rgba(255,255,255,.62)}
         .thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:rgba(255,255,255,.06)}
         .link{color:#93c5fd;text-decoration:none}
         @media (max-width:900px){.gf-grid,.lark-panel{grid-template-columns:1fr}.row,.item-row{grid-template-columns:1fr}.icon-actions{justify-content:flex-start}.form{grid-template-columns:1fr}.code-text{max-width:100%}}
@@ -416,9 +447,9 @@ export default function GoofishSubscriptions() {
           <div className="panel-head"><h2>最近机会记录</h2><span className="muted">{opportunities.length}</span></div>
           <div className="rows">
             {opportunities.length === 0 ? <div className="item-row muted">暂无机会记录</div> : opportunities.slice(0, 20).map(item => (
-              <div className="item-row" key={`${item.item_id}-${item.created_at}`}>
-                <div className="muted">{item.decision}</div>
-                <div><a className="link" href={item.source_url} target="_blank" rel="noreferrer">{item.title}</a><div className="muted">item {item.item_id} · {item.subscription_kind || "-"} {item.subscription_key || ""}</div></div>
+              <div className="item-row opportunity-row" key={`${item.item_id}-${item.created_at}`}>
+                <div><span className={`decision-badge ${decisionClass(item.decision)}`}>{decisionLabel(item.decision)}</span></div>
+                <div className="item-main"><a className="link" href={item.source_url} target="_blank" rel="noreferrer">{item.title}</a><div className="muted">item {item.item_id} · {item.subscription_kind || "-"} {item.subscription_key || ""}</div></div>
                 <div>{item.profit_margin ?? "-"}</div>
                 <div className="muted">{fmt(item.created_at)}</div>
               </div>
