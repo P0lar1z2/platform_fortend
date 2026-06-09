@@ -1,17 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bell, Copy, MessageCircle, PauseCircle, PlayCircle, Plus, RefreshCw, Trash2, Unlink } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+import { Bell, Copy, Key, LogIn, MessageCircle, PauseCircle, PlayCircle, Plus, RefreshCw, Trash2, Unlink, X } from "lucide-react";
 import { useToast } from "../components/Toast";
 import AppHeader from "../components/AppHeader";
 import {
   createLarkBindCode,
+  deleteAccount,
   deleteLarkBinding,
   deleteRefSubscription,
   deleteSellerSubscription,
+  getCookie,
   getLarkBindingStatus,
+  listAccounts,
   listGoofishItems,
   listGoofishOpportunities,
   listRefSubscriptions,
   listSellerSubscriptions,
+  loginStart,
+  loginStatus,
+  refreshAccount,
   setRefSubscriptionEnabled,
   setSellerSubscriptionEnabled,
   triggerRefSubscription,
@@ -20,10 +27,13 @@ import {
   upsertSellerSubscription,
 } from "../api/goofish";
 import type {
+  GoofishAccount,
+  GoofishCookie,
   GoofishItem,
   GoofishOpportunity,
   GoofishRefSubscription,
   GoofishSellerSubscription,
+  GoofishStatus,
   LarkBindCode,
   LarkBindingStatus,
 } from "../api/types";
@@ -45,6 +55,37 @@ function fmt(value?: DateLike) {
   const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleString("zh-CN");
+}
+
+// 账号更新时间是 epoch 秒，单独格式化（与上面的 DateLike/毫秒口径区分）。
+function fmtEpoch(epoch?: number | null): string {
+  if (!epoch) return "—";
+  try {
+    return new Date(epoch * 1000).toLocaleString("zh-CN");
+  } catch {
+    return "—";
+  }
+}
+
+function statusColor(s?: string): string {
+  if (!s) return "rgba(255,255,255,0.4)";
+  if (s === "logged_in") return "#34d399";
+  if (s === "pending" || s === "need_face") return "#f59e0b";
+  if (s === "expired" || s.startsWith("error")) return "#ef4444";
+  return "rgba(255,255,255,0.55)";
+}
+
+function statusLabel(s?: string): string {
+  switch (s) {
+    case "logged_in": return "已登录";
+    case "anonymous": return "未登录";
+    case "pending": return "等待扫码";
+    case "need_face": return "需人脸验证";
+    case "expired": return "已过期";
+    case "unknown": return "未知";
+    default:
+      return s?.startsWith("error") ? "错误" : (s ?? "—");
+  }
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -103,8 +144,21 @@ function decisionClass(decision?: string | null): string {
   }
 }
 
+const iconBtnStyle: CSSProperties = {
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  width: 30, height: 30, borderRadius: 8,
+  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)",
+  color: "rgba(255,255,255,0.7)", cursor: "pointer",
+};
+
 export default function GoofishSubscriptions() {
   const { push } = useToast();
+  // 账号管理
+  const [accounts, setAccounts] = useState<GoofishAccount[]>([]);
+  const [newAccount, setNewAccount] = useState("");
+  const [scan, setScan] = useState<GoofishStatus | null>(null);
+  const [cookieView, setCookieView] = useState<GoofishCookie | null>(null);
+  // 订阅
   const [sellers, setSellers] = useState<GoofishSellerSubscription[]>([]);
   const [refs, setRefs] = useState<GoofishRefSubscription[]>([]);
   const [items, setItems] = useState<GoofishItem[]>([]);
@@ -119,20 +173,22 @@ export default function GoofishSubscriptions() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [sellerData, refData, itemData, opportunityData] = await Promise.all([
+      const [accountData, sellerData, refData, itemData, opportunityData] = await Promise.all([
+        listAccounts(),
         listSellerSubscriptions(),
         listRefSubscriptions(),
         listGoofishItems(),
         listGoofishOpportunities(),
       ]);
       const larkData = await getLarkBindingStatus().catch(() => null);
+      setAccounts(accountData);
       setSellers(sellerData);
       setRefs(refData);
       setItems(itemData);
       setOpportunities(opportunityData);
       setLarkBinding(larkData);
     } catch (e: any) {
-      push(e?.response?.data?.error || "加载闲鱼订阅失败", "error");
+      push(e?.response?.data?.error || "加载闲鱼后台失败", "error");
     } finally {
       setLoading(false);
     }
@@ -140,6 +196,89 @@ export default function GoofishSubscriptions() {
 
   useEffect(() => { load(); }, [load]);
 
+  // 扫码登录轮询：scan 打开且未到终态时，每 2.5s 拉一次 status
+  useEffect(() => {
+    if (!scan) return;
+    const terminal = (s: string) => s === "logged_in" || s === "expired" || s.startsWith("error");
+    if (terminal(scan.status)) {
+      if (scan.status === "logged_in") {
+        push(`${scan.account} 登录成功`, "success");
+        setScan(null);
+        load();
+      }
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        setScan(await loginStatus(scan.account));
+      } catch (e: any) {
+        push(e?.response?.data?.error || "轮询状态失败", "error");
+        setScan(null);
+      }
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [scan, push, load]);
+
+  // ── 账号操作 ──────────────────────────────────────────────
+  async function startLogin(acct: string) {
+    const name = acct.trim();
+    if (!name) { push("请输入账号名", "warning"); return; }
+    setBusy(`acct:${name}`);
+    try {
+      const st = await loginStart(name);
+      if (st.status === "logged_in") {
+        push(`${name} 已登录`, "success");
+        load();
+      } else {
+        setScan(st);
+      }
+      setNewAccount("");
+    } catch (e: any) {
+      push(e?.response?.data?.error || "启动登录失败", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleAccountRefresh(acct: string) {
+    setBusy(`acct:${acct}`);
+    try {
+      await refreshAccount(acct);
+      push(`${acct} 已刷新`, "success");
+      load();
+    } catch (e: any) {
+      push(e?.response?.data?.error || "刷新失败", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleCookie(acct: string) {
+    setBusy(`acct:${acct}`);
+    try {
+      setCookieView(await getCookie(acct));
+    } catch (e: any) {
+      push(e?.response?.data?.error || "获取 cookie 失败（未登录？）", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDeleteAccount(acct: string) {
+    if (!window.confirm(`确认删除账号「${acct}」？将清除登录态、快照与 profile，不可恢复。`)) return;
+    setBusy(`acct:${acct}`);
+    try {
+      await deleteAccount(acct);
+      push(`${acct} 已删除`, "success");
+      load();
+    } catch (e: any) {
+      push(e?.response?.data?.error || "删除失败", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // ── Lark / 订阅操作 ───────────────────────────────────────
   async function generateBindCode() {
     setBusy("lark:bind-code");
     try {
@@ -337,7 +476,15 @@ export default function GoofishSubscriptions() {
         .decision-badge.pending,.decision-badge.unknown{background:rgba(255,255,255,.08);color:rgba(255,255,255,.62)}
         .thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:rgba(255,255,255,.06)}
         .link{color:#93c5fd;text-decoration:none}
-        @media (max-width:900px){.gf-grid,.lark-panel{grid-template-columns:1fr}.row,.item-row{grid-template-columns:1fr}.icon-actions{justify-content:flex-start}.form{grid-template-columns:1fr}.code-text{max-width:100%}}
+        /* 账号管理（作用域化，避开 .row/.status 同名冲突） */
+        .acct-add{display:flex;gap:10px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+        .acct-add input{flex:1;height:36px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.18);color:#fff;padding:0 11px;outline:none}
+        .acct-head,.acct-row{display:grid;grid-template-columns:1.4fr 1fr 1.2fr 1.6fr 1.4fr;align-items:center;gap:10px;padding:12px 16px;font-size:13px}
+        .acct-head{font-size:11px;font-weight:600;letter-spacing:.5px;color:rgba(255,255,255,.4);border-bottom:1px solid rgba(255,255,255,.07)}
+        .acct-row{border-bottom:1px solid rgba(255,255,255,.055)}
+        .acct-row:last-child{border-bottom:0}
+        .acct-row:hover{background:rgba(255,255,255,.03)}
+        @media (max-width:900px){.gf-grid,.lark-panel{grid-template-columns:1fr}.row,.item-row,.acct-head,.acct-row{grid-template-columns:1fr}.icon-actions{justify-content:flex-start}.form{grid-template-columns:1fr}.code-text{max-width:100%}}
       `}</style>
 
       <AppHeader />
@@ -345,13 +492,60 @@ export default function GoofishSubscriptions() {
       <main className="gf-main">
         <div className="gf-top">
           <div className="gf-title">
-            <h1>闲鱼订阅</h1>
-            <p>商家订阅走商家主页抓取，ref 订阅走搜索抓取；monitor 查到新商品后会发 Lark 通知。</p>
+            <h1>闲鱼后台</h1>
+            <p>管理闲鱼登录账号与抓取订阅；monitor 查到新商品后会发 Lark 通知。</p>
           </div>
           <button className="gf-action" onClick={load} disabled={loading}><RefreshCw size={15} /> 刷新</button>
         </div>
 
-        <section className="lark-panel">
+        {/* 账号管理 */}
+        <section className="panel section" style={{ marginTop: 0 }}>
+          <div className="panel-head"><h2>闲鱼账号</h2><span className="muted">{accounts.length}</span></div>
+          <div className="acct-add">
+            <input
+              value={newAccount}
+              onChange={e => setNewAccount(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") startLogin(newAccount); }}
+              placeholder="输入账号名（自定义标识，如 shop01）后启动扫码登录"
+            />
+            <button className="primary" style={{ padding: "0 18px" }} onClick={() => startLogin(newAccount)} disabled={busy !== null}>
+              <Plus size={15} /> 添加并登录
+            </button>
+          </div>
+          <div className="rows">
+            <div className="acct-head">
+              <span>账号</span><span>状态</span><span>UNB</span><span>更新时间</span><span style={{ textAlign: "right" }}>操作</span>
+            </div>
+            {loading ? (
+              <div className="acct-row muted" style={{ display: "block", textAlign: "center", padding: "32px" }}>加载中…</div>
+            ) : accounts.length === 0 ? (
+              <div className="acct-row muted" style={{ display: "block", textAlign: "center", padding: "32px" }}>暂无账号，上方添加一个开始扫码登录</div>
+            ) : accounts.map(a => {
+              const live = a.liveStatus && a.liveStatus !== a.status ? a.liveStatus : undefined;
+              return (
+                <div key={a.account} className="acct-row">
+                  <span style={{ fontWeight: 500 }}>{a.account}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: 9999, background: statusColor(a.status) }} />
+                    <span style={{ color: statusColor(a.status) }}>{statusLabel(a.status)}</span>
+                    {live && <span style={{ fontSize: 11, color: statusColor(live) }}>({statusLabel(live)})</span>}
+                  </span>
+                  <span style={{ color: "rgba(255,255,255,0.6)", fontFamily: "monospace", fontSize: 12 }}>{a.unb || "—"}</span>
+                  <span className="muted" style={{ fontSize: 12 }}>{fmtEpoch(a.updatedAt)}</span>
+                  <span className="icon-actions">
+                    <button className="icon-btn" title="登录/重新扫码" disabled={busy !== null} onClick={() => startLogin(a.account)}><LogIn size={14} /></button>
+                    <button className="icon-btn" title="刷新登录态" disabled={busy !== null} onClick={() => handleAccountRefresh(a.account)}><RefreshCw size={14} /></button>
+                    <button className="icon-btn" title="查看 cookie" disabled={busy !== null} onClick={() => handleCookie(a.account)}><Key size={14} /></button>
+                    <button className="icon-btn" title="删除账号" style={{ color: "#ef4444" }} disabled={busy !== null} onClick={() => handleDeleteAccount(a.account)}><Trash2 size={14} /></button>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Lark 通知 */}
+        <section className="lark-panel section">
           <div className="lark-meta">
             <span className="lark-icon"><MessageCircle size={18} /></span>
             <div>
@@ -457,6 +651,72 @@ export default function GoofishSubscriptions() {
           </div>
         </section>
       </main>
+
+      {/* 扫码 modal */}
+      {scan && (
+        <Modal onClose={() => setScan(null)} title={`登录：${scan.account}`}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 13, color: statusColor(scan.status), marginBottom: 16 }}>
+              {scan.status === "need_face" ? "需人脸验证，请用手机闲鱼 App 扫码完成活体验证" : "请用手机闲鱼 App 扫码登录"}
+            </div>
+            {(scan.faceQrcode || scan.qrcode) ? (
+              <img
+                src={`data:image/png;base64,${scan.faceQrcode || scan.qrcode}`}
+                alt="二维码"
+                style={{ width: 220, height: 220, objectFit: "contain", borderRadius: 12, background: "#fff", padding: 8 }}
+              />
+            ) : (
+              <div style={{ width: 220, height: 220, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12, background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
+                二维码生成中…
+              </div>
+            )}
+            <div style={{ marginTop: 16, fontSize: 12, color: "rgba(255,255,255,0.4)" }}>状态：{statusLabel(scan.status)} · 自动刷新中</div>
+          </div>
+        </Modal>
+      )}
+
+      {/* cookie modal */}
+      {cookieView && (
+        <Modal onClose={() => setCookieView(null)} title={`Cookie：${cookieView.account}`}>
+          <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+            <div><span style={{ color: "rgba(255,255,255,0.5)" }}>UNB：</span><span style={{ fontFamily: "monospace" }}>{cookieView.unb}</span></div>
+            <div><span style={{ color: "rgba(255,255,255,0.5)" }}>昵称：</span>{cookieView.tracknick || "—"}</div>
+            <div><span style={{ color: "rgba(255,255,255,0.5)" }}>Cookie 条数：</span>{cookieView.cookies.length}</div>
+            <div style={{ marginTop: 12, color: "rgba(255,255,255,0.5)" }}>mtop_cookie：</div>
+            <textarea
+              readOnly
+              value={cookieView.mtopCookie}
+              style={{ width: "100%", height: 120, marginTop: 6, padding: 12, borderRadius: 10, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", fontSize: 12, fontFamily: "monospace", resize: "none", outline: "none" }}
+            />
+            <button
+              onClick={() => { navigator.clipboard?.writeText(cookieView.mtopCookie); push("已复制 cookie", "success"); }}
+              style={{ marginTop: 12, padding: "8px 18px", borderRadius: 9999, background: "#fff", color: "#0a0a0a", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              复制 cookie
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: 380, maxWidth: "90vw", padding: 28, borderRadius: 18, background: "rgba(20,20,22,0.96)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <span style={{ fontSize: 15, fontWeight: 600 }}>{title}</span>
+          <button onClick={onClose} style={{ ...iconBtnStyle, width: 28, height: 28 }}><X size={15} /></button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }

@@ -11,8 +11,7 @@ const NAV = [
   { to: "/", label: "首页" },
   { to: "/brands", label: "品牌列表" },
   { to: "/config", label: "配置表" },
-  { to: "/accounts", label: "账号管理" },
-  { to: "/goofish-subscriptions", label: "闲鱼订阅" },
+  { to: "/goofish-subscriptions", label: "闲鱼后台" },
   { to: "/watchlist", label: "关注列表" },
 ];
 
