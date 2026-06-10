@@ -18,8 +18,11 @@
  */
 
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { Search, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, Plus } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { LoginPageGate } from "../components/LoginGate";
 import { useWatchlist } from "../hooks/useWatchlist";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useToast } from "../components/Toast";
@@ -44,6 +47,8 @@ function WatchPlaceholder({ size = 120 }) {
 
 export default function Watchlist() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const gated = !authLoading && !user;
   const { list, count, isNearLimit, isFull, remove } = useWatchlist();
   const toast = useToast();
   const [viewMode, setViewMode] = useViewPreference<"card" | "list">("watchlist-view", "card");
@@ -81,7 +86,11 @@ export default function Watchlist() {
   const goPage = (p: number) => { setCurrentPage(Math.max(1, Math.min(p, totalPages))); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: bd }}>
+    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: bd, ...(gated ? { filter: "blur(4px)", pointerEvents: "none" as const, userSelect: "none" as const } : null) }}>
+      {gated && createPortal(
+        <LoginPageGate onClose={() => navigate("/")} />,
+        document.body,
+      )}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}

@@ -77,7 +77,12 @@ export default function Login() {
         </form>
 
         <p style={{ fontSize: 12, fontWeight: 300, color: "rgba(255,255,255,0.4)", textAlign: "center", marginTop: 24 }}>
-          还没有账号？<Link to={`/signup${from !== "/" ? `?from=${encodeURIComponent(from)}` : ""}`} style={{ color: "rgba(255,255,255,0.8)", textDecoration: "underline", textUnderlineOffset: 3 }}>注册</Link>
+          账号由管理员开通，暂不支持自助注册。
+        </p>
+        <p style={{ textAlign: "center", marginTop: 14 }}>
+          <Link to="/" style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", textDecoration: "underline", textUnderlineOffset: 3 }}>
+            跳过登录，以游客身份浏览
+          </Link>
         </p>
       </div>
     </div>

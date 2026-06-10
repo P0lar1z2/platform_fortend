@@ -10,7 +10,6 @@ import Watchlist from "./pages/Watchlist";
 import Config from "./pages/Config";
 import GoofishSubscriptions from "./pages/GoofishSubscriptions";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
 import ExternalListingRedirect from "./pages/ExternalListingRedirect";
 
 export default function App() {
@@ -28,7 +27,8 @@ export default function App() {
           <Route path="/accounts" element={<Navigate to="/goofish-subscriptions" replace />} />
           <Route path="/goofish-subscriptions" element={<GoofishSubscriptions />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          {/* 自助注册已下线,账号由运营开通;旧链接回登录页 */}
+          <Route path="/signup" element={<Navigate to="/login" replace />} />
           <Route path="/external-listing" element={<ExternalListingRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

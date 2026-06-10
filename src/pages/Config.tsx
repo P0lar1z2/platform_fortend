@@ -25,9 +25,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { Clock, ChevronRight, ChevronDown, Save, Plus, Info, Bookmark } from "lucide-react";
 import { fetchConfig, updateConfig as apiUpdateConfig } from "../api/config";
 import { useToast } from "../components/Toast";
+import { useAuth } from "../hooks/useAuth";
+import { LoginPageGate } from "../components/LoginGate";
 import AppHeader from "../components/AppHeader";
 
 // ─── MOCK: Platform configs ──────────────────────────────
@@ -131,6 +134,10 @@ function ConfigField({ label, value, onChange, suffix = "", prefix = "", placeho
 // ─── MAIN ────────────────────────────────────────────────
 export default function ConfigPage() {
   const toast = useToast();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  // 配置表是全局运营配置 → 仅 operator 可用,其余(游客/普通用户)看蒙版。
+  const gated = !authLoading && (!user || user.role !== "operator");
   const [platforms, setPlatforms] = useState<any[]>(INITIAL_PLATFORMS);
   const [config, setConfig] = useState<Record<string, any>>(INITIAL_CONFIG);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -179,7 +186,15 @@ export default function ConfigPage() {
   const SOURCE_COLORS = { starbuyer: "#34d399", ecoauc: "#60a5fa", yahoo: "#fbbf24", rakuten: "#f472b6", ebay: "#a78bfa" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: bd }}>
+    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: bd, ...(gated ? { filter: "blur(4px)", pointerEvents: "none" as const, userSelect: "none" as const } : null) }}>
+      {gated && createPortal(
+        <LoginPageGate
+          onClose={() => navigate("/")}
+          title="配置表为运营功能"
+          description="该页面用于全局参数配置，仅运营账号可访问。如需开通请联系管理员。"
+        />,
+        document.body,
+      )}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}

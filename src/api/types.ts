@@ -204,6 +204,8 @@ export interface WatchlistResponse {
 export interface AuthUser {
   id: string;
   email: string;
+  /** "user"（默认）| "operator"。operator 可访问运营页面(配置表/闲鱼后台等)。 */
+  role?: string;
   createdAt?: string;
 }
 

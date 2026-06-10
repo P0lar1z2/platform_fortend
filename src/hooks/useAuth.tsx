@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { fetchMe, login as apiLogin, logout as apiLogout, signup as apiSignup } from "../api/auth";
+import { fetchMe, login as apiLogin, logout as apiLogout } from "../api/auth";
 import type { AuthUser } from "../api/types";
 
 interface AuthCtx {
@@ -7,7 +7,6 @@ interface AuthCtx {
   loading: boolean;
   refresh: () => Promise<void>;
   login: (email: string, password: string) => Promise<AuthUser>;
-  signup: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
 
@@ -38,19 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u;
   }, []);
 
-  const signup = useCallback(async (email: string, password: string) => {
-    const u = await apiSignup(email, password);
-    setUser(u);
-    return u;
-  }, []);
-
   const logout = useCallback(async () => {
     await apiLogout();
     setUser(null);
   }, []);
 
   return (
-    <Ctx.Provider value={{ user, loading, refresh, login, signup, logout }}>
+    <Ctx.Provider value={{ user, loading, refresh, login, logout }}>
       {children}
     </Ctx.Provider>
   );
