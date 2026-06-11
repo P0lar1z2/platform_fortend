@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark } from "lucide-react";
+import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark, TrendingUp } from "lucide-react";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useWatchlist } from "../hooks/useWatchlist";
@@ -85,6 +85,7 @@ export default function SearchResults() {
   const urlQ = params.get("q") || "";
   const urlBrand = params.get("brand") || "全部";
   const urlPage = Math.max(1, Number(params.get("page") || 1));
+  const urlSort = params.get("sort") || "tx_desc"; // 默认按成交数排序
 
   const [searchValue, setSearchValue] = useState(urlQ);
   const [viewMode, setViewMode] = useViewPreference<"card" | "list">("search-view", "card");
@@ -128,17 +129,21 @@ export default function SearchResults() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let alive = true;
     setLoading(true);
+    setPageData([]); // 清掉上一次结果，避免新搜索加载时还显示旧卡片
     searchWatches({
       q: urlQ || undefined,
       brand: urlBrand === "全部" ? undefined : urlBrand,
       page: urlPage,
       size: PER_PAGE,
+      sort: urlSort,
     })
-      .then(r => { setPageData(r.items); setTotal(r.total); })
-      .catch(() => { setPageData([]); setTotal(0); })
-      .finally(() => setLoading(false));
-  }, [urlQ, urlBrand, urlPage]);
+      .then(r => { if (!alive) return; setPageData(r.items); setTotal(r.total); })
+      .catch(() => { if (!alive) return; setPageData([]); setTotal(0); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; }; // 丢弃过期请求，避免旧结果覆盖新搜索
+  }, [urlQ, urlBrand, urlPage, urlSort]);
 
   const brands = ["全部", ...brandNames];
 
@@ -429,6 +434,18 @@ export default function SearchResults() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Sort toggle: 默认按成交数(tx_desc)，点击切回字母序(alpha) */}
+            <button className="mode-btn" onClick={() => updateParams({ sort: urlSort === "tx_desc" ? "alpha" : null, page: 1 })} title={urlSort === "tx_desc" ? "当前：按成交数排序（点击切字母序）" : "当前：字母序（点击按成交数排序）"} style={{
+              background: urlSort === "tx_desc" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
+              color: "#fff", width: "auto", padding: "0 12px", display: "flex", alignItems: "center", gap: "6px",
+            }}>
+              <TrendingUp size={16} color={urlSort === "tx_desc" ? "#fff" : "rgba(255,255,255,0.5)"} />
+              <span style={{ fontSize: "12px", fontWeight: 500, color: urlSort === "tx_desc" ? "#fff" : "rgba(255,255,255,0.5)" }}>成交</span>
+            </button>
+
+            {/* Divider */}
+            <div style={{ width: "1px", height: "20px", background: "rgba(255,255,255,0.1)" }} />
+
             {/* Filter toggle */}
             <button className="mode-btn" onClick={() => setShowFilters(!showFilters)} style={{
               background: showFilters ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",

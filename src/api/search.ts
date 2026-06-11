@@ -6,6 +6,8 @@ export interface SearchParams {
   brand?: string;
   page?: number;
   size?: number;
+  /** "tx_desc" = 按成交数从多到少；省略 = 默认按字母序 */
+  sort?: string;
 }
 
 export async function searchWatches(params: SearchParams): Promise<PageEnvelope<WatchListItem>> {
