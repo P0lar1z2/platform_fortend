@@ -25,11 +25,13 @@ export async function fetchTransactions(
   period: Period,
   page: number,
   pageSize: number,
+  sortBy?: "date" | "price",
+  sortDir?: "asc" | "desc",
 ): Promise<MarketTransactionsPage> {
   if (!API_MOCK) {
     const { data } = await apiClient.get<MarketTransactionsPage>(
       `/watches/${encodeURIComponent(ref)}/transactions`,
-      { params: { period, page, page_size: pageSize } },
+      { params: { period, page, page_size: pageSize, sort_by: sortBy, sort_dir: sortDir } },
     );
     return data;
   }

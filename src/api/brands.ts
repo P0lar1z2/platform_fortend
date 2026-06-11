@@ -24,6 +24,8 @@ export interface BrandWatchesParams {
   family?: string;
   page?: number;
   size?: number;
+  sort_by?: "transactions";
+  sort_dir?: "asc" | "desc";
 }
 
 export async function getBrand(slug: string, params?: BrandWatchesParams): Promise<BrandDetail> {
@@ -39,7 +41,7 @@ export async function getBrand(slug: string, params?: BrandWatchesParams): Promi
     family: ["Submariner", "Daytona", "GMT-Master II"][i % 3],
     name: `${slug} model ${i + 1}`,
     transactions: 120 + i * 9,
-  }));
+  })).sort((a, b) => (b.transactions ?? 0) - (a.transactions ?? 0));
   return {
     brand: { slug, name: slug.charAt(0).toUpperCase() + slug.slice(1), modelCount: 142, totalTransactions: 12400 },
     families: ["Submariner", "GMT-Master II", "Daytona", "Datejust", "Day-Date", "Explorer II"],

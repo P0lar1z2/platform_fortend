@@ -6,7 +6,7 @@
  * 设计稿: ~/Downloads/raventik_brands.jsx
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { listBrands } from "../api/brands";
@@ -16,13 +16,98 @@ const hd = "'Instrument Serif','Noto Serif SC',serif";
 const bd = "'Barlow','Noto Sans SC',sans-serif";
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
+type BrandFilterLetter = "ALL" | string;
+
+function normalizeBrandToken(value?: string | null) {
+  return (value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function looksMojibake(value?: string | null) {
+  return /[ÃÂã�]/.test(value ?? "");
+}
+
+function brandNameQuality(name?: string | null) {
+  const text = (name ?? "").trim();
+  if (!text) return 0;
+  const letters = text.replace(/[^A-Za-z]/g, "");
+  const isAllCaps = letters.length > 1 && letters === letters.toUpperCase();
+  const isAllLower = letters.length > 1 && letters === letters.toLowerCase();
+  return (looksMojibake(text) ? -20 : 20)
+    + (/[A-Z]/.test(letters) && /[a-z]/.test(letters) ? 8 : 0)
+    + (isAllCaps ? -4 : 0)
+    + (isAllLower ? -2 : 0)
+    + Math.min(text.length, 40) / 10;
+}
+
+function brandInitial(brand: BrandSummary) {
+  const candidates = [brand.name, brand.slug];
+  for (const candidate of candidates) {
+    const raw = (candidate ?? "").trim();
+    if (!raw || looksMojibake(raw)) continue;
+    const normalized = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    const first = normalized[0]?.toUpperCase();
+    if (first && /^[A-Z]$/.test(first)) return first;
+  }
+  return "#";
+}
+
+function mergeBrands(items: BrandSummary[]) {
+  const byKey = new Map<string, { brand: BrandSummary; quality: number }>();
+
+  for (const item of items) {
+    const key = normalizeBrandToken(item.slug) || normalizeBrandToken(item.name);
+    if (!key) continue;
+
+    const current = byKey.get(key);
+    const nextTransactions = item.totalTransactions ?? 0;
+    const nextModelCount = item.modelCount ?? 0;
+
+    if (!current) {
+      byKey.set(key, {
+        brand: {
+          ...item,
+          slug: item.slug || key,
+          modelCount: nextModelCount,
+          totalTransactions: nextTransactions,
+        },
+        quality: brandNameQuality(item.name),
+      });
+      continue;
+    }
+
+    const nextQuality = brandNameQuality(item.name);
+    const useNextLabel = nextQuality > current.quality;
+    const preferred = useNextLabel ? item : current.brand;
+
+    byKey.set(key, {
+      brand: {
+        ...current.brand,
+        slug: preferred.slug || current.brand.slug || item.slug || key,
+        name: preferred.name || current.brand.name || item.name,
+        nameCn: preferred.nameCn || current.brand.nameCn || item.nameCn,
+        logoUrl: preferred.logoUrl ?? current.brand.logoUrl ?? item.logoUrl,
+        modelCount: Math.max(current.brand.modelCount ?? 0, nextModelCount),
+        totalTransactions: (current.brand.totalTransactions ?? 0) + nextTransactions,
+      },
+      quality: Math.max(current.quality, nextQuality),
+    });
+  }
+
+  return Array.from(byKey.values()).map(entry => entry.brand);
+}
+
 export default function BrandList() {
   const navigate = useNavigate();
   const [brands, setBrands] = useState<BrandSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [activeLetter, setActiveLetter] = useState<string>("ALL");
-  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [activeLetter, setActiveLetter] = useState<BrandFilterLetter>("ALL");
 
   useEffect(() => {
     listBrands()
@@ -31,16 +116,22 @@ export default function BrandList() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredBrands = activeLetter === "ALL"
-    ? brands
-    : brands.filter(b => (b.name?.[0] || "").toUpperCase() === activeLetter);
-
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
-    if (scrollRef.current) {
-      e.preventDefault();
-      scrollRef.current.scrollLeft += e.deltaY * 2;
+  const dedupedBrands = useMemo(() => mergeBrands(brands), [brands]);
+  const letterCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const brand of dedupedBrands) {
+      const letter = brandInitial(brand);
+      counts.set(letter, (counts.get(letter) ?? 0) + 1);
     }
-  }, []);
+    return counts;
+  }, [dedupedBrands]);
+  const filterLetters = useMemo(() => {
+    const available = LETTERS.filter(letter => letterCounts.has(letter));
+    return letterCounts.has("#") ? [...available, "#"] : available;
+  }, [letterCounts]);
+  const filteredBrands = activeLetter === "ALL"
+    ? dedupedBrands
+    : dedupedBrands.filter(brand => brandInitial(brand) === activeLetter);
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: bd }}>
@@ -64,8 +155,6 @@ export default function BrandList() {
         .explore-link{display:flex;align-items:center;gap:4px;font-size:12px;color:rgba(255,255,255,0.3);transition:all 0.3s ease}
         .brand-card:hover .explore-link{color:rgba(255,255,255,0.7);transform:translateX(3px)}
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
-        .alpha-scroll{-ms-overflow-style:none;scrollbar-width:none}
-        .alpha-scroll::-webkit-scrollbar{display:none}
       `}</style>
 
       {/* ═══ NAV ═══ */}
@@ -114,61 +203,61 @@ export default function BrandList() {
           {/* Subtitle + Alphabet filter — same line */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"20px"}}>
             <p style={{fontSize:"14px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>
-              {loading ? "加载中..." : err ? err : `覆盖 ${brands.length} 个主流品牌,跨平台历史交易数据聚合。`}
+              {loading ? "加载中..." : err ? err : `覆盖 ${dedupedBrands.length} 个主流品牌,跨平台历史交易数据聚合。`}
             </p>
 
-            {!loading && !err && brands.length > 0 && (
-              <div style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
-                {/* ALL — always visible */}
-                <button onClick={() => setActiveLetter("ALL")} style={{
-                  padding: "6px 14px", borderRadius: "8px", border: "none", cursor: "pointer",
-                  background: activeLetter === "ALL" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.04)",
-                  color: activeLetter === "ALL" ? "#fff" : "rgba(255,255,255,0.5)",
-                  fontSize: "12px", fontWeight: 600, fontFamily: hd, fontStyle: "italic",
-                  transition: "all 0.2s", flexShrink: 0,
-                  boxShadow: activeLetter === "ALL" ? "inset 0 1px 0 rgba(255,255,255,0.1)" : "none",
-                }}
-                onMouseEnter={e => { if (activeLetter !== "ALL") (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; }}
-                onMouseLeave={e => { if (activeLetter !== "ALL") (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.5)"; }}
-                >ALL</button>
-
-                <div style={{width:"1px",height:"20px",background:"rgba(255,255,255,0.1)",flexShrink:0}}/>
-
-                {/* A-Z carousel */}
-                <div style={{position:"relative",width:"340px",flexShrink:0}}>
-                  <div style={{position:"absolute",left:0,top:0,bottom:0,width:"28px",zIndex:2,background:"linear-gradient(to right,rgba(10,10,10,1) 0%,rgba(10,10,10,0.8) 40%,transparent 100%)",pointerEvents:"none",borderRadius:"10px 0 0 10px"}}/>
-                  <div style={{position:"absolute",right:0,top:0,bottom:0,width:"28px",zIndex:2,background:"linear-gradient(to left,rgba(10,10,10,1) 0%,rgba(10,10,10,0.8) 40%,transparent 100%)",pointerEvents:"none",borderRadius:"0 10px 10px 0"}}/>
-                  <div ref={scrollRef} onWheel={handleWheel} className="alpha-scroll" style={{
-                    display:"flex",alignItems:"center",gap:"1px",
-                    overflowX:"auto",scrollBehavior:"smooth",
-                    padding:"5px 24px",
-                    WebkitOverflowScrolling:"touch",
-                    background:"rgba(255,255,255,0.03)",borderRadius:"10px",
-                    border:"1px solid rgba(255,255,255,0.06)",
-                    boxShadow:"inset 0 1px 2px rgba(0,0,0,0.2),inset 0 -1px 1px rgba(255,255,255,0.04)",
-                  }}>
-                    {LETTERS.map(l => {
-                      const active = activeLetter === l;
-                      return (
-                        <button key={l} onClick={() => setActiveLetter(l)} style={{
-                          padding: "5px 0", borderRadius: "5px", border: "none", cursor: "pointer",
-                          background: active ? "rgba(255,255,255,0.15)" : "transparent",
-                          color: active ? "#fff" : "rgba(255,255,255,0.45)",
-                          fontSize: "13px", fontWeight: 600, fontFamily: hd, fontStyle: "italic",
-                          transition: "all 0.15s", width: "30px", textAlign: "center",
-                          flexShrink: 0,
-                          boxShadow: active ? "inset 0 1px 0 rgba(255,255,255,0.1)" : "none",
-                        }}
-                        onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; } }}
-                        onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.45)"; (e.currentTarget as HTMLElement).style.background = "transparent"; } }}
-                        >{l}</button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
+
+          {!loading && !err && dedupedBrands.length > 0 && (
+            <div style={{
+              marginTop:"22px",
+              display:"flex",
+              alignItems:"center",
+              gap:"7px",
+              flexWrap:"wrap",
+              padding:"10px",
+              background:"rgba(255,255,255,0.035)",
+              border:"1px solid rgba(255,255,255,0.06)",
+              borderRadius:"14px",
+              boxShadow:"inset 0 1px 2px rgba(0,0,0,0.22),inset 0 -1px 1px rgba(255,255,255,0.04)",
+            }}>
+              {[{ letter:"ALL", count:dedupedBrands.length }, ...filterLetters.map(letter => ({ letter, count: letterCounts.get(letter) ?? 0 }))].map(({ letter, count }) => {
+                const active = activeLetter === letter;
+                const label = letter === "ALL" ? "ALL" : letter;
+                return (
+                  <button key={letter} onClick={() => setActiveLetter(letter)} title={`${label} · ${count} 个品牌`} style={{
+                    minWidth: letter === "ALL" ? "58px" : "38px",
+                    height:"32px",
+                    padding: letter === "ALL" ? "0 14px" : "0 10px",
+                    borderRadius:"8px",
+                    border:"none",
+                    cursor:"pointer",
+                    background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.045)",
+                    color: active ? "#fff" : "rgba(255,255,255,0.52)",
+                    fontSize:"13px",
+                    fontWeight:600,
+                    fontFamily:hd,
+                    fontStyle:"italic",
+                    transition:"background 0.16s ease,color 0.16s ease",
+                    boxShadow: active ? "inset 0 1px 0 rgba(255,255,255,0.12)" : "none",
+                  }}
+                  onMouseEnter={e => {
+                    if (!active) {
+                      (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.82)";
+                      (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)";
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!active) {
+                      (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.52)";
+                      (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.045)";
+                    }
+                  }}
+                  >{label}</button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Active filter indicator */}
           {activeLetter !== "ALL" && (
@@ -179,7 +268,7 @@ export default function BrandList() {
         </div>
 
         {!loading && !err && filteredBrands.length > 0 && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"28px 24px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"28px 24px"}}>
             {filteredBrands.map((brand) => {
               const nameLen = brand.name.length;
               const nameSize = nameLen > 16 ? "20px" : nameLen > 10 ? "24px" : "28px";
@@ -215,7 +304,7 @@ export default function BrandList() {
           </div>
         )}
 
-        {!loading && !err && brands.length > 0 && filteredBrands.length === 0 && (
+        {!loading && !err && dedupedBrands.length > 0 && filteredBrands.length === 0 && (
           <div style={{padding:"60px 20px",textAlign:"center",color:"rgba(255,255,255,0.4)",fontFamily:bd,fontSize:"13px"}}>
             没有以 "{activeLetter}" 开头的品牌
           </div>

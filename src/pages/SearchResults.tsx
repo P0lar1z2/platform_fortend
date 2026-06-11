@@ -6,8 +6,10 @@ import { useViewPreference } from "../hooks/useViewPreference";
 import { useWatchlist } from "../hooks/useWatchlist";
 import WatchlistToggle from "../components/WatchlistToggle";
 import SearchEmptyState from "../components/SearchEmptyState";
+import BrandSelect from "../components/BrandSelect";
 import { WATCHLIST_CAPACITY } from "../lib/constants";
 import { searchWatches } from "../api/search";
+import { listBrands } from "../api/brands";
 import { buildPageList } from "../utils/pagination";
 import type { WatchListItem } from "../api/types";
 
@@ -40,6 +42,7 @@ const WATCHES = [
 ];
 
 const PER_PAGE = 12;
+const FALLBACK_BRAND_NAMES = ["Rolex", "Omega", "Patek Philippe", "Audemars Piguet", "Cartier", "IWC", "Tudor", "Grand Seiko"];
 
 // ─── PLACEHOLDER IMAGE ──────────────────────────────────
 function WatchPlaceholder({ size = 120 }) {
@@ -86,8 +89,20 @@ export default function SearchResults() {
   const [searchValue, setSearchValue] = useState(urlQ);
   const [viewMode, setViewMode] = useViewPreference<"card" | "list">("search-view", "card");
   const [showFilters, setShowFilters] = useState(false);
+  const [brandNames, setBrandNames] = useState<string[]>(FALLBACK_BRAND_NAMES);
 
   useEffect(() => { setSearchValue(urlQ); }, [urlQ]);
+
+  useEffect(() => {
+    let alive = true;
+    listBrands()
+      .then(r => {
+        if (!alive || !r.items?.length) return;
+        setBrandNames(r.items.map(b => b.name).sort((a, b) => a.localeCompare(b)));
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, []);
 
   function updateParams(patch: Record<string, string | number | null>) {
     const np = new URLSearchParams(params);
@@ -125,8 +140,7 @@ export default function SearchResults() {
       .finally(() => setLoading(false));
   }, [urlQ, urlBrand, urlPage]);
 
-  // 品牌过滤候选：服务端没单独 endpoint 时用 mock 列表 (Phase 11.F.2 后续可换 listBrands)
-  const brands = ["全部", "Rolex", "Omega", "Patek Philippe", "Audemars Piguet", "Cartier", "IWC", "Tudor", "Grand Seiko"];
+  const brands = ["全部", ...brandNames];
 
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(urlPage, totalPages);
@@ -327,7 +341,9 @@ export default function SearchResults() {
                   display: "flex", alignItems: "center", gap: "8px",
                   padding: "4px 4px 4px 16px",
                   borderRadius: "9999px",
+                  overflow: "visible",
                 }}>
+            <BrandSelect value={urlBrand} onChange={brand => updateParams({ brand, page: 1 })} fontFamily={body} compact />
             <Search size={16} color="rgba(255,255,255,0.35)" />
             <input type="text" placeholder="搜索品牌、型号或 Ref Number..."
               value={searchValue} onChange={e => setSearchValue(e.target.value)}
@@ -405,10 +421,10 @@ export default function SearchResults() {
               fontFamily: "'Noto Serif SC', serif", fontSize: "28px", fontWeight: 700,
               color: "#fff", marginBottom: "4px",
             }}>
-              {searchValue ? `"${searchValue}" 的搜索结果` : "全部表款"}
+              {urlQ ? (urlBrand === "全部" ? `"${urlQ}" 的搜索结果` : `"${urlQ}" 在 ${urlBrand} 中的搜索结果`) : (urlBrand === "全部" ? "全部表款" : `${urlBrand} 表款`)}
             </h1>
             <p style={{ fontSize: "13px", fontWeight: 300, color: "rgba(255,255,255,0.4)", fontFamily: body }}>
-              {loading ? "加载中..." : `共找到 ${total} 个型号`}
+              {loading ? "加载中..." : `${urlBrand === "全部" ? "" : `${urlBrand} · `}共找到 ${total} 个型号`}
             </p>
           </div>
 

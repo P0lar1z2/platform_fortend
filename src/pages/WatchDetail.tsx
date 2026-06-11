@@ -17,15 +17,16 @@
  * ============================================================
  */
 
-import { useEffect, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Clock, ChevronRight, ChevronLeft, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, Search } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, Search } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
 import { DATA_SOURCES as SHARED_DATA_SOURCES, DATA_SOURCE_BY_KEY } from "../lib/constants";
 import { decisionMeta, valuationLevelLabel } from "../lib/labels";
+import { getExternalListingHref } from "../lib/externalListings";
 import { fetchPriceRange, postValuation } from "../api/valuations";
 import { fetchWatch, fetchMarket, fetchTransactions } from "../api/watches";
-import type { ValuationResponse, WatchInfo, MarketResponse, MarketTransactionsPage, Period } from "../api/types";
+import type { ValuationResponse, WatchInfo, MarketResponse, MarketTransactionsPage, MarketTx, Period } from "../api/types";
 
 // 数据源集中配置在 lib/constants.ts，新增源只改那里
 const DATA_SOURCES = SHARED_DATA_SOURCES;
@@ -35,6 +36,17 @@ const SOURCE_COLORS: Record<string, string> = Object.fromEntries(
 void DATA_SOURCE_BY_KEY;
 
 const TIME_WINDOWS: Period[] = ["1M", "3M", "6M", "1Y", "All"];
+type TxSortField = "date" | "price";
+type TxSortDir = "asc" | "desc";
+type TxSort = { field: TxSortField; dir: TxSortDir };
+type ChartHoverPoint = {
+  px: number;
+  py: number;
+  date: string;
+  sourceName: string;
+  price: number;
+  color: string;
+};
 
 /* ─── COMPONENTS ────────────────────────────────────────── */
 
@@ -64,6 +76,7 @@ function SrcLogo({ source }) {
 function PriceChart({ data, visible, hasOlderData, currentPeriod, onExpandPeriod }: { data: any[]; visible: any[]; hasOlderData?: boolean; currentPeriod?: string; onExpandPeriod?: () => void }) {
   const W = 720, H = 280, pX = 70, pY = 24;
   const cW = W - pX - 30, cH = H - pY * 2;
+  const [hovered, setHovered] = useState<ChartHoverPoint | null>(null);
   const all = data.flatMap(d => visible.map(s => d[s]).filter(v => typeof v === "number" && isFinite(v)));
   if (!all.length) {
     return (
@@ -87,26 +100,119 @@ function PriceChart({ data, visible, hasOlderData, currentPeriod, onExpandPeriod
   const y = (v) => pY + (1 - (v - mn) / rng) * cH;
   const gP = Array.from({ length: 5 }, (_, i) => mn + (rng / 4) * i);
   const dI = [0, Math.floor(data.length * 0.25), Math.floor(data.length * 0.5), Math.floor(data.length * 0.75), data.length - 1];
+  const tipW = 154, tipH = 70;
+  const tipX = hovered ? Math.min(Math.max(hovered.px + 12, pX), W - tipW - 12) : 0;
+  const tipY = hovered ? Math.min(Math.max(hovered.py - tipH - 10, 8), H - tipH - 18) : 0;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", overflow: "visible" }} onMouseLeave={() => setHovered(null)}>
       {gP.map((p, i) => (<g key={i}><line x1={pX} y1={y(p)} x2={W - 30} y2={y(p)} stroke="rgba(255,255,255,0.05)" /><text x={pX - 10} y={y(p) + 4} textAnchor="end" fill="rgba(255,255,255,0.25)" fontSize="9" fontFamily="Barlow,sans-serif">¥{(p / 10000).toFixed(0)}万</text></g>))}
       {dI.map((idx, i) => (<text key={i} x={x(idx)} y={H - 4} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="9" fontFamily="Barlow,sans-serif">{data[idx]?.date?.slice(0, 7) ?? ""}</text>))}
       {visible.map(s => {
-        const ptsArr = data.map((d, i) => (typeof d[s] === "number" && isFinite(d[s])) ? [x(i), y(d[s])] as [number, number] : null).filter(Boolean) as [number, number][];
         const color = SOURCE_COLORS[s] || "#888";
+        const sourceName = DATA_SOURCES.find(src => src.key === s)?.name ?? s;
+        const ptsArr = data.map((d, i) => {
+          const price = d[s];
+          if (typeof price !== "number" || !isFinite(price)) return null;
+          return { px: x(i), py: y(price), price, date: d.date ?? "", sourceName, color };
+        }).filter(Boolean) as ChartHoverPoint[];
         return (
           <g key={s}>
             {ptsArr.length >= 2 && (
-              <polyline points={ptsArr.map(([px, py]) => `${px},${py}`).join(" ")} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+              <polyline points={ptsArr.map(point => `${point.px},${point.py}`).join(" ")} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
             )}
-            {ptsArr.map(([px, py], i) => (
-              <circle key={i} cx={px} cy={py} r={ptsArr.length === 1 ? 4 : 2.5} fill={color} opacity="0.9" />
+            {ptsArr.map((point, i) => (
+              <g key={i}>
+                <circle cx={point.px} cy={point.py} r={ptsArr.length === 1 ? 4 : 2.5} fill={color} opacity="0.9" />
+                <circle
+                  cx={point.px}
+                  cy={point.py}
+                  r="9"
+                  fill="transparent"
+                  style={{ cursor: "default" }}
+                  onMouseEnter={() => setHovered(point)}
+                  onMouseMove={() => setHovered(point)}
+                >
+                  <title>{`${point.sourceName} · ${point.date} · ¥${point.price.toLocaleString()}`}</title>
+                </circle>
+              </g>
             ))}
           </g>
         );
       })}
+      {hovered && (
+        <g pointerEvents="none">
+          <line x1={hovered.px} y1={pY} x2={hovered.px} y2={H - pY} stroke="rgba(255,255,255,0.12)" strokeDasharray="3 4" />
+          <circle cx={hovered.px} cy={hovered.py} r="5" fill={hovered.color} stroke="#fff" strokeWidth="1.5" />
+          <rect x={tipX} y={tipY} width={tipW} height={tipH} rx="8" fill="rgba(18,18,18,0.96)" stroke="rgba(255,255,255,0.14)" />
+          <text x={tipX + 12} y={tipY + 20} fill="rgba(255,255,255,0.55)" fontSize="10" fontWeight="500" fontFamily="Barlow,Noto Sans SC,sans-serif">{hovered.sourceName}</text>
+          <text x={tipX + 12} y={tipY + 40} fill="#fff" fontSize="15" fontWeight="700" fontFamily="Barlow,Noto Sans SC,sans-serif">¥{hovered.price.toLocaleString()}</text>
+          <text x={tipX + 12} y={tipY + 58} fill="rgba(255,255,255,0.45)" fontSize="10" fontFamily="Barlow,Noto Sans SC,sans-serif">{hovered.date || "日期未知"}</text>
+        </g>
+      )}
     </svg>
   );
+}
+
+function SortHeader({
+  active,
+  dir,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  dir: TxSortDir;
+  label: string;
+  onClick: () => void;
+}) {
+  const Icon = !active ? ArrowUpDown : dir === "asc" ? ChevronUp : ChevronDown;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`${label}排序`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        width: "fit-content",
+        padding: 0,
+        border: "none",
+        background: "transparent",
+        cursor: "pointer",
+        color: active ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.3)",
+        fontSize: "10px",
+        fontWeight: 500,
+        letterSpacing: "0.8px",
+        fontFamily: "'Barlow','Noto Sans SC',sans-serif",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span>{label}</span>
+      <Icon size={12} strokeWidth={2} />
+    </button>
+  );
+}
+
+function txSortValue(tx: MarketTx, field: TxSortField): number {
+  if (field === "price") return Number.isFinite(tx.price) ? tx.price : Number.NEGATIVE_INFINITY;
+  const rawDate = tx.dateTime || tx.date || "";
+  const time = rawDate ? new Date(rawDate).getTime() : Number.NaN;
+  return Number.isFinite(time) ? time : Number.NEGATIVE_INFINITY;
+}
+
+function ExternalListingLink({
+  href,
+  children,
+  className,
+  style,
+}: {
+  href?: string;
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  if (!href) return <span className={className} style={style}>{children}</span>;
+  return <a href={getExternalListingHref(href)} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
 }
 
 /* ─── MAIN ──────────────────────────────────────────────── */
@@ -124,39 +230,52 @@ export default function WatchDetail() {
   const [marketLoading, setMarketLoading] = useState(true);
 
   const [tw, setTw] = useState<Period>("3M");
-  const [vm, setVm] = useState("chart");
+  const [vm, setVm] = useState("list");
   const [visSrc, setVisSrc] = useState(DATA_SOURCES.map(s => s.key));
   const [txPg, setTxPg] = useState(1);
   const [txPage, setTxPage] = useState<MarketTransactionsPage | null>(null);
   const [txLoading, setTxLoading] = useState(false);
+  const [txSort, setTxSort] = useState<TxSort | null>(null);
   const [imgIdx, setImgIdx] = useState(0);
   const txPP = 10;
 
   useEffect(() => {
+    let alive = true;
     setWatch(null); setWatchError(null);
-    fetchWatch(ref).then(setWatch).catch(err => {
+    fetchWatch(ref).then(nextWatch => {
+      if (alive) setWatch(nextWatch);
+    }).catch(err => {
+      if (!alive) return;
       setWatchError(err?.response?.status === 404 ? "未找到该型号" : "加载失败");
     });
+    return () => { alive = false; };
   }, [ref]);
 
   useEffect(() => {
+    let alive = true;
+    setMarket(null);
     setMarketLoading(true);
+    setTxPg(1);
     fetchMarket(ref, tw)
-      .then(m => { setMarket(m); setTxPg(1); })
-      .catch(() => setMarket(null))
-      .finally(() => setMarketLoading(false));
+      .then(nextMarket => { if (alive) setMarket(nextMarket); })
+      .catch(() => { if (alive) setMarket(null); })
+      .finally(() => { if (alive) setMarketLoading(false); });
+    return () => { alive = false; };
   }, [ref, tw]);
 
   // Transactions are fetched independently so page nav doesn't re-trigger
   // chart/aggregate work. period/ref change resets to page 1 above; this
   // effect then runs on (ref, tw, txPg).
   useEffect(() => {
+    let alive = true;
+    setTxPage(null);
     setTxLoading(true);
-    fetchTransactions(ref, tw, txPg, txPP)
-      .then(setTxPage)
-      .catch(() => setTxPage(null))
-      .finally(() => setTxLoading(false));
-  }, [ref, tw, txPg]);
+    fetchTransactions(ref, tw, txPg, txPP, txSort?.field, txSort?.dir)
+      .then(nextPage => { if (alive) setTxPage(nextPage); })
+      .catch(() => { if (alive) setTxPage(null); })
+      .finally(() => { if (alive) setTxLoading(false); });
+    return () => { alive = false; };
+  }, [ref, tw, txPg, txSort]);
 
   // ── Section C: Trading Valuation ──
   const [inputMode, setInputMode] = useState("price");    // "price" = input buy price, "margin" = input target margin
@@ -175,12 +294,27 @@ export default function WatchDetail() {
   const [valuationResult, setValuationResult] = useState<ValuationResponse | null>(null);
   const [valuationLoading, setValuationLoading] = useState(false);
   const [valuationError, setValuationError] = useState<string | null>(null);
+  const valuationRequestId = useRef(0);
 
   const numericInput = inputMode === "price" ? Number(buyPrice) : Number(targetMargin);
   const canRunValuation = Number.isFinite(numericInput) && numericInput > 0;
 
   useEffect(() => {
-    fetchPriceRange(ref).then(setPriceRange).catch(() => setPriceRange(null));
+    let alive = true;
+    setPriceRange(null);
+    fetchPriceRange(ref)
+      .then(nextRange => { if (alive) setPriceRange(nextRange); })
+      .catch(() => { if (alive) setPriceRange(null); });
+    return () => { alive = false; };
+  }, [ref]);
+
+  useEffect(() => {
+    valuationRequestId.current += 1;
+    setShowResults(false);
+    setExpandedRoutes({});
+    setValuationResult(null);
+    setValuationError(null);
+    setValuationLoading(false);
   }, [ref]);
 
   const hd = "'Instrument Serif','Noto Serif SC',serif";
@@ -206,6 +340,26 @@ export default function WatchDetail() {
   const txTotal = txPage?.total ?? 0;
   const txTP = Math.max(1, txPage?.totalPages ?? 1);
   const txPD = txPage?.transactions ?? [];
+  const sortedTxPD = useMemo(() => {
+    if (!txSort) return txPD;
+    const direction = txSort.dir === "asc" ? 1 : -1;
+    return [...txPD].sort((a, b) => {
+      const av = txSortValue(a, txSort.field);
+      const bv = txSortValue(b, txSort.field);
+      const avMissing = av === Number.NEGATIVE_INFINITY;
+      const bvMissing = bv === Number.NEGATIVE_INFINITY;
+      if (avMissing !== bvMissing) return avMissing ? 1 : -1;
+      if (av !== bv) return (av - bv) * direction;
+      return (a.id || "").localeCompare(b.id || "");
+    });
+  }, [txPD, txSort]);
+  function toggleTxSort(field: TxSortField) {
+    setTxSort(prev => {
+      const nextDir: TxSortDir = prev?.field === field && prev.dir === "desc" ? "asc" : "desc";
+      return { field, dir: nextDir };
+    });
+    setTxPg(1);
+  }
   // Ellipsis pagination: always show first/last + a window of ±1 around current,
   // collapse gaps to "…". For small totals (≤7 pages) just list every page.
   const txPageItems: Array<number | "…"> = (() => {
@@ -377,13 +531,13 @@ export default function WatchDetail() {
               {/* Highest — clickable, links to that listing */}
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>最高价</div>
-                <a href={oStats.maxTx?.listingUrl||"#"} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"24px",fontWeight:600,color:"#22c55e",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{(oStats.max ?? 0).toLocaleString()}<ExternalLink size={13} color="rgba(34,197,94,0.5)"/></a>
+                <ExternalListingLink href={oStats.maxTx?.listingUrl} className="sl" style={{fontSize:"24px",fontWeight:600,color:"#22c55e",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{(oStats.max ?? 0).toLocaleString()}<ExternalLink size={13} color="rgba(34,197,94,0.5)"/></ExternalListingLink>
                 {oStats.maxTx&&<div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{oStats.maxTx.date || oStats.maxTx.dateTime || "—"} · {oStats.maxTx.sourceName}</div>}
               </div>
               {/* Lowest — clickable */}
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>最低价</div>
-                <a href={oStats.minTx?.listingUrl||"#"} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"24px",fontWeight:600,color:"#f59e0b",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{(oStats.min ?? 0).toLocaleString()}<ExternalLink size={13} color="rgba(245,158,11,0.5)"/></a>
+                <ExternalListingLink href={oStats.minTx?.listingUrl} className="sl" style={{fontSize:"24px",fontWeight:600,color:"#f59e0b",fontFamily:bd,display:"flex",alignItems:"center",gap:"4px"}}>¥{(oStats.min ?? 0).toLocaleString()}<ExternalLink size={13} color="rgba(245,158,11,0.5)"/></ExternalListingLink>
                 {oStats.minTx&&<div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{oStats.minTx.date || oStats.minTx.dateTime || "—"} · {oStats.minTx.sourceName}</div>}
               </div>
               <div>
@@ -412,7 +566,7 @@ export default function WatchDetail() {
                   ].map((it,i)=>(
                     <div key={i}>
                       <div style={{fontSize:"9px",fontWeight:500,color:"rgba(255,255,255,0.25)",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:"3px",fontFamily:bd}}>{it.l}</div>
-                      {it.lk?(<a href={it.lk} target="_blank" rel="noopener noreferrer" className="sl" style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{(it.v ?? 0).toLocaleString()}</a>):(<div style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{(it.v ?? 0).toLocaleString()}</div>)}
+                      {it.lk?(<ExternalListingLink href={it.lk} className="sl" style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{(it.v ?? 0).toLocaleString()}</ExternalListingLink>):(<div style={{fontSize:"14px",fontWeight:600,color:"rgba(255,255,255,0.8)",fontFamily:bd}}>¥{(it.v ?? 0).toLocaleString()}</div>)}
                       {it.date && <div style={{fontSize:"9px",color:"rgba(255,255,255,0.25)",fontFamily:bd,marginTop:"2px"}}>{it.date}</div>}
                     </div>
                   ))}
@@ -446,7 +600,11 @@ export default function WatchDetail() {
             {/* API: GET /api/watches/:ref/transactions?period={tw}&page=&page_size= */}
             {vm==="list"&&(<>
               <div style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"10px 24px",gap:"8px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
-                {["","来源","拍卖日期","成交价 (JPY)","成色","配件","材质","表盘色","Ref",""].map((h,i)=>(<span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>))}
+                <span />
+                <span style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>来源</span>
+                <SortHeader active={txSort?.field === "date"} dir={txSort?.field === "date" ? txSort.dir : "desc"} label="拍卖日期" onClick={() => toggleTxSort("date")} />
+                <SortHeader active={txSort?.field === "price"} dir={txSort?.field === "price" ? txSort.dir : "desc"} label="成交价 (JPY)" onClick={() => toggleTxSort("price")} />
+                {["成色","配件","材质","表盘色","Ref",""].map((h,i)=>(<span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>))}
               </div>
               {txPD.length === 0 && (
                 <div style={{padding:"40px 24px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"12px",color:"rgba(255,255,255,0.4)",fontSize:"13px",fontFamily:bd}}>
@@ -462,7 +620,7 @@ export default function WatchDetail() {
                   )}
                 </div>
               )}
-              {txPD.map((tx,i)=>(
+              {sortedTxPD.map((tx,i)=>(
                 <div key={tx.id} className="tr" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail — tx.thumbUrl (mongo product_image_url) */}
                   <div style={{width:"32px",height:"32px",borderRadius:"6px",overflow:"hidden",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -485,7 +643,7 @@ export default function WatchDetail() {
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.45)",fontFamily:bd}}>{tx.dialColor}</span>
                   <span style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.35)",fontFamily:bd}}>{tx.ref}</span>
                   {/* Link to original listing — API: tx.listingUrl */}
-                  <div style={{display:"flex",justifyContent:"flex-end"}}><a href={tx.listingUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:"12px",color:"rgba(100,130,200,0.7)",textDecoration:"none",fontFamily:bd,display:"flex",alignItems:"center",gap:"3px"}}>查看<ExternalLink size={11}/></a></div>
+                  <div style={{display:"flex",justifyContent:"flex-end"}}><ExternalListingLink href={tx.listingUrl} style={{fontSize:"12px",color:"rgba(100,130,200,0.7)",textDecoration:"none",fontFamily:bd,display:"flex",alignItems:"center",gap:"3px"}}>查看<ExternalLink size={11}/></ExternalListingLink></div>
                 </div>
               ))}
               {txTP>1&&(<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",padding:"16px"}}>
@@ -644,6 +802,7 @@ export default function WatchDetail() {
             {/* PDF 4.3 运行估值 —— POST /api/valuations */}
             <button className="cb" disabled={valuationLoading || !canRunValuation}
               onClick={async () => {
+                const requestId = ++valuationRequestId.current;
                 setShowResults(true); setExpandedRoutes({}); setValuationLoading(true); setValuationError(null);
                 try {
                   const result = await postValuation({
@@ -656,14 +815,17 @@ export default function WatchDetail() {
                     warrantyRegion: warrantyRegion || undefined,
                     warrantyYear: warrantyYear ? Number(warrantyYear) : null,
                   });
-                  setValuationResult(result);
+                  if (requestId === valuationRequestId.current) setValuationResult(result);
                 } catch (e: any) {
+                  if (requestId !== valuationRequestId.current) return;
                   const msg = e?.response?.data?.error?.message
                     || e?.message
                     || "估值失败,请稍后重试";
                   setValuationError(msg);
                   setValuationResult(null);
-                } finally { setValuationLoading(false); }
+                } finally {
+                  if (requestId === valuationRequestId.current) setValuationLoading(false);
+                }
               }}
               style={{
                 width:"100%",padding:"13px",borderRadius:"12px",border:"none",
@@ -839,9 +1001,9 @@ export default function WatchDetail() {
                     {s.accessories?.card && <span style={{fontSize:"10px",padding:"2px 7px",borderRadius:"5px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)"}}>Card</span>}
                     {!s.accessories?.box && !s.accessories?.card && <span style={{fontSize:"11px",color:"rgba(255,255,255,0.2)"}}>—</span>}
                   </div>
-                  <a href={s.listingUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:"12px",color:"rgba(100,130,200,0.8)",textDecoration:"none",fontFamily:bd,display:"flex",alignItems:"center",gap:"3px",justifySelf:"end"}}>
+                  <ExternalListingLink href={s.listingUrl} style={{fontSize:"12px",color:"rgba(100,130,200,0.8)",textDecoration:"none",fontFamily:bd,display:"flex",alignItems:"center",gap:"3px",justifySelf:"end"}}>
                     查看<ExternalLink size={11}/>
-                  </a>
+                  </ExternalListingLink>
                 </div>
               ))}
             </div>

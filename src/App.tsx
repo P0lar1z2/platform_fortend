@@ -10,6 +10,7 @@ import Watchlist from "./pages/Watchlist";
 import Config from "./pages/Config";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ExternalListingRedirect from "./pages/ExternalListingRedirect";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/config" element={<Config />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/external-listing" element={<ExternalListingRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
