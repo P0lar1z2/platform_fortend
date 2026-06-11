@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark, TrendingUp } from "lucide-react";
+import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark, TrendingUp, CornerDownRight } from "lucide-react";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useWatchlist } from "../hooks/useWatchlist";
@@ -129,6 +129,7 @@ export default function SearchResults() {
   const [pageData, setPageData] = useState<WatchListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [pageJump, setPageJump] = useState(String(urlPage));
 
   useEffect(() => {
     let alive = true;
@@ -156,6 +157,14 @@ export default function SearchResults() {
   const body = "'Barlow','Noto Sans SC',sans-serif";
 
   const goPage = (p: number) => { updateParams({ page: Math.max(1, Math.min(p, totalPages)) }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  useEffect(() => { setPageJump(String(page)); }, [page]);
+
+  const submitPageJump = () => {
+    const requestedPage = Number(pageJump);
+    if (!Number.isFinite(requestedPage)) return;
+    goPage(Math.trunc(requestedPage));
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: body }}>
@@ -301,6 +310,9 @@ export default function SearchResults() {
           backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         }
         .page-btn:hover { background: rgba(255,255,255,0.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
+        .page-jump-input { -moz-appearance: textfield; }
+        .page-jump-input::-webkit-inner-spin-button,
+        .page-jump-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
         .filter-chip {
           transition: all 0.2s ease; cursor: pointer; border: none;
@@ -635,6 +647,36 @@ export default function SearchResults() {
               }}>
               <ChevronRight size={16} />
             </button>
+            <form
+              onSubmit={e => { e.preventDefault(); submitPageJump(); }}
+              style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "8px" }}
+            >
+              <input
+                type="number"
+                className="page-jump-input"
+                min={1}
+                max={totalPages}
+                value={pageJump}
+                onChange={e => setPageJump(e.target.value)}
+                aria-label="跳转页码"
+                title={`输入页码，范围 1-${totalPages}`}
+                style={{
+                  width: "64px", height: "36px", padding: "0 8px",
+                  borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)",
+                  outline: "none", background: "rgba(255,255,255,0.04)",
+                  color: "#fff", fontFamily: body, fontSize: "13px", textAlign: "center",
+                }}
+              />
+              <button
+                type="submit"
+                className="page-btn"
+                title="跳转到指定页"
+                aria-label="跳转到指定页"
+                style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)" }}
+              >
+                <CornerDownRight size={16} />
+              </button>
+            </form>
           </div>
         )}
 
