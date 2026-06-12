@@ -1,19 +1,21 @@
 import { apiClient, API_MOCK } from "./client";
 import type { WatchInfo, MarketResponse, MarketTransactionsPage, Period } from "./types";
 
-export async function fetchWatch(ref: string): Promise<WatchInfo> {
+export async function fetchWatch(ref: string, catalogId?: string): Promise<WatchInfo> {
   if (!API_MOCK) {
-    const { data } = await apiClient.get<WatchInfo>(`/watches/${encodeURIComponent(ref)}`);
+    const { data } = await apiClient.get<WatchInfo>(`/watches/${encodeURIComponent(ref)}`, {
+      params: { catalog_id: catalogId },
+    });
     return data;
   }
-  return MOCK_WATCH(ref);
+  return MOCK_WATCH(ref, catalogId);
 }
 
-export async function fetchMarket(ref: string, period: Period): Promise<MarketResponse> {
+export async function fetchMarket(ref: string, period: Period, catalogId?: string): Promise<MarketResponse> {
   if (!API_MOCK) {
     const { data } = await apiClient.get<MarketResponse>(
       `/watches/${encodeURIComponent(ref)}/market`,
-      { params: { period } }
+      { params: { period, catalog_id: catalogId } }
     );
     return data;
   }
@@ -27,19 +29,30 @@ export async function fetchTransactions(
   pageSize: number,
   sortBy?: "date" | "price",
   sortDir?: "asc" | "desc",
+  catalogId?: string,
 ): Promise<MarketTransactionsPage> {
   if (!API_MOCK) {
     const { data } = await apiClient.get<MarketTransactionsPage>(
       `/watches/${encodeURIComponent(ref)}/transactions`,
-      { params: { period, page, page_size: pageSize, sort_by: sortBy, sort_dir: sortDir } },
+      {
+        params: {
+          period,
+          page,
+          page_size: pageSize,
+          sort_by: sortBy,
+          sort_dir: sortDir,
+          catalog_id: catalogId,
+        },
+      },
     );
     return data;
   }
   return { period, windowDays: 90, page, pageSize, total: 0, totalPages: 0, transactions: [] };
 }
 
-function MOCK_WATCH(ref: string): WatchInfo {
+function MOCK_WATCH(ref: string, catalogId?: string): WatchInfo {
   return {
+    catalogId,
     ref,
     brand: "Rolex",
     brandSlug: "rolex",

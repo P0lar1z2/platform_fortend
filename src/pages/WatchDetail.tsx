@@ -18,7 +18,7 @@
  */
 
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
 import AppHeader from "../components/AppHeader";
@@ -222,12 +222,14 @@ function ExternalListingLink({
 
 export default function WatchDetail() {
   const { ref: routeRef } = useParams<{ ref: string }>();
+  const [searchParams] = useSearchParams();
 
   // PDF 4.1/4.2: Section A 表款信息 + Section B 市场数据 走 API
   const ref = routeRef ?? "126610LN";
   const { user } = useAuth();
   // 游客点"设置交易预期"时拦截引导登录。
   const [showTxGate, setShowTxGate] = useState(false);
+  const catalogId = searchParams.get("catalogId") || undefined;
   const [watch, setWatch] = useState<WatchInfo | null>(null);
   const [watchError, setWatchError] = useState<string | null>(null);
   const [market, setMarket] = useState<MarketResponse | null>(null);
@@ -246,26 +248,26 @@ export default function WatchDetail() {
   useEffect(() => {
     let alive = true;
     setWatch(null); setWatchError(null);
-    fetchWatch(ref).then(nextWatch => {
+    fetchWatch(ref, catalogId).then(nextWatch => {
       if (alive) setWatch(nextWatch);
     }).catch(err => {
       if (!alive) return;
       setWatchError(err?.response?.status === 404 ? "未找到该型号" : "加载失败");
     });
     return () => { alive = false; };
-  }, [ref]);
+  }, [ref, catalogId]);
 
   useEffect(() => {
     let alive = true;
     setMarket(null);
     setMarketLoading(true);
     setTxPg(1);
-    fetchMarket(ref, tw)
+    fetchMarket(ref, tw, catalogId)
       .then(nextMarket => { if (alive) setMarket(nextMarket); })
       .catch(() => { if (alive) setMarket(null); })
       .finally(() => { if (alive) setMarketLoading(false); });
     return () => { alive = false; };
-  }, [ref, tw]);
+  }, [ref, tw, catalogId]);
 
   // Transactions are fetched independently so page nav doesn't re-trigger
   // chart/aggregate work. period/ref change resets to page 1 above; this
@@ -274,12 +276,12 @@ export default function WatchDetail() {
     let alive = true;
     setTxPage(null);
     setTxLoading(true);
-    fetchTransactions(ref, tw, txPg, txPP, txSort?.field, txSort?.dir)
+    fetchTransactions(ref, tw, txPg, txPP, txSort?.field, txSort?.dir, catalogId)
       .then(nextPage => { if (alive) setTxPage(nextPage); })
       .catch(() => { if (alive) setTxPage(null); })
       .finally(() => { if (alive) setTxLoading(false); });
     return () => { alive = false; };
-  }, [ref, tw, txPg, txSort]);
+  }, [ref, tw, txPg, txSort, catalogId]);
 
   // ── Section C: Trading Valuation ──
   const [inputMode, setInputMode] = useState("price");    // "price" = input buy price, "margin" = input target margin
@@ -306,11 +308,11 @@ export default function WatchDetail() {
   useEffect(() => {
     let alive = true;
     setPriceRange(null);
-    fetchPriceRange(ref)
+    fetchPriceRange(ref, catalogId)
       .then(nextRange => { if (alive) setPriceRange(nextRange); })
       .catch(() => { if (alive) setPriceRange(null); });
     return () => { alive = false; };
-  }, [ref]);
+  }, [ref, catalogId]);
 
   useEffect(() => {
     valuationRequestId.current += 1;
@@ -319,7 +321,7 @@ export default function WatchDetail() {
     setValuationResult(null);
     setValuationError(null);
     setValuationLoading(false);
-  }, [ref]);
+  }, [ref, catalogId]);
 
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
@@ -479,7 +481,7 @@ export default function WatchDetail() {
           {/* PDF 4.1 按钮 - 设置关注 + 设置交易预期 */}
           <div style={{display:"flex",gap:"10px",justifyContent:"center",marginTop:"20px"}}>
             <WatchlistToggle
-              entry={{ ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }}
+              entry={{ catalogId: watch?.catalogId ?? catalogId, ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }}
               variant="wide"
             />
             <span style={{position:"relative",display:"inline-flex"}}>
@@ -797,6 +799,7 @@ export default function WatchDetail() {
                 try {
                   const result = await postValuation({
                     ref,
+                    catalogId,
                     mode: inputMode === "price" ? "price" : "margin",
                     value: numericInput,
                     source: valuationSource === "全部" ? "all" : (valuationSource as any),
@@ -1005,7 +1008,7 @@ export default function WatchDetail() {
               <Bell size={14} color="rgba(255,255,255,0.3)" style={{flexShrink:0}}/>
               <span style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.35)",fontFamily:bd}}>加入关注列表后，系统将每日监控各平台货源并通过飞书推送</span>
             </div>
-            <WatchlistToggle entry={{ ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }} variant="button" />
+            <WatchlistToggle entry={{ catalogId: watch?.catalogId ?? catalogId, ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }} variant="button" />
           </div>
         </section>
       </main>

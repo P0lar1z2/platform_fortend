@@ -23,12 +23,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, Plus } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { LoginPageGate } from "../components/LoginGate";
-import { useWatchlist } from "../hooks/useWatchlist";
+import { useWatchlist, type WatchlistEntry } from "../hooks/useWatchlist";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useToast } from "../components/Toast";
 import AppHeader from "../components/AppHeader";
 import { WATCHLIST_CAPACITY, WATCHLIST_WARN_THRESHOLD } from "../lib/constants";
 import { buildPageList } from "../utils/pagination";
+import { getWatchHref } from "../lib/watchRoutes";
+import { getWatchIdentity } from "../lib/watchIdentity";
 
 const PER_PAGE = 12;
 
@@ -55,7 +57,7 @@ export default function Watchlist() {
   const [currentPage, setCurrentPage] = useState(1);
   const [brandFilter, setBrandFilter] = useState("全部");
   const [showFilters, setShowFilters] = useState(false);
-  const [removingRef, setRemovingRef] = useState<string | null>(null);
+  const [removingIdentity, setRemovingIdentity] = useState<string | null>(null);
 
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
@@ -74,12 +76,13 @@ export default function Watchlist() {
   const page = Math.min(currentPage, totalPages);
   const pageData = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const unfollow = (ref: string) => {
-    setRemovingRef(ref);
+  const unfollow = (entry: WatchlistEntry) => {
+    const identity = getWatchIdentity(entry.ref, entry.catalogId);
+    setRemovingIdentity(identity);
     setTimeout(() => {
-      remove(ref);
+      remove(entry.ref, entry.catalogId);
       toast.push("已取消关注", "info");
-      setRemovingRef(null);
+      setRemovingIdentity(null);
     }, 300);
   };
 
@@ -216,9 +219,9 @@ export default function Watchlist() {
         {watches.length > 0 && viewMode === "card" && (
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"}}>
             {pageData.map(w => (
-              <div key={w.ref}
-                   onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
-                   className={`gc watch-card ${removingRef===w.ref?"removing":""}`}
+              <div key={getWatchIdentity(w.ref, w.catalogId)}
+                   onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
+                   className={`gc watch-card ${removingIdentity===getWatchIdentity(w.ref, w.catalogId)?"removing":""}`}
                    style={{padding:0,display:"flex",flexDirection:"column"}}>
                 <div style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
                   {w.thumbUrl ? <img src={w.thumbUrl} alt={w.name||w.ref} style={{width:160,height:160,objectFit:"contain"}}/> : <WatchPlaceholder size={160}/>}
@@ -236,7 +239,7 @@ export default function Watchlist() {
                   </div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"3px"}}>
                     <h3 style={{fontSize:"15px",fontWeight:600,color:"#fff",fontFamily:bd,letterSpacing:"0.3px",lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>Ref. {w.ref}</h3>
-                    <button className="bk-btn" onClick={(e)=>{e.stopPropagation();unfollow(w.ref)}} title="取消关注">
+                    <button className="bk-btn" onClick={(e)=>{e.stopPropagation();unfollow(w)}} title="取消关注">
                       <Bookmark size={16} color="#f59e0b" fill="#f59e0b" strokeWidth={1.5}/>
                     </button>
                   </div>
@@ -269,9 +272,9 @@ export default function Watchlist() {
             </div>
             {/* Rows */}
             {pageData.map((w,i)=>(
-              <div key={w.ref}
-                   onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
-                   className={`watch-row ${removingRef===w.ref?"removing":""}`}
+              <div key={getWatchIdentity(w.ref, w.catalogId)}
+                   onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
+                   className={`watch-row ${removingIdentity===getWatchIdentity(w.ref, w.catalogId)?"removing":""}`}
                    style={{
                      display:"grid",gridTemplateColumns:"48px 1fr 130px 130px 90px 36px 32px",
                      padding:"10px 20px",gap:"12px",
@@ -292,7 +295,7 @@ export default function Watchlist() {
                   <div style={{width:"5px",height:"5px",borderRadius:"50%",background:"#22c55e",flexShrink:0,boxShadow:"0 0 6px rgba(34,197,94,0.4)"}}/>
                   <span style={{fontSize:"11px",fontWeight:500,color:"rgba(34,197,94,0.7)",fontFamily:bd}}>监控中</span>
                 </div>
-                <button className="bk-btn" onClick={(e)=>{e.stopPropagation();unfollow(w.ref)}} title="取消关注">
+                <button className="bk-btn" onClick={(e)=>{e.stopPropagation();unfollow(w)}} title="取消关注">
                   <Bookmark size={15} color="#f59e0b" fill="#f59e0b" strokeWidth={1.5}/>
                 </button>
                 <div style={{display:"flex",justifyContent:"center"}}><ChevronRight size={15} color="rgba(255,255,255,0.2)"/></div>

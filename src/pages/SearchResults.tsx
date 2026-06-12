@@ -12,6 +12,7 @@ import { WATCHLIST_CAPACITY } from "../lib/constants";
 import { searchWatches } from "../api/search";
 import { listBrands } from "../api/brands";
 import { buildPageList } from "../utils/pagination";
+import { getWatchHref } from "../lib/watchRoutes";
 import type { WatchListItem } from "../api/types";
 
 // ─── MOCK DATA (24 watches) ─────────────────────────────
@@ -434,8 +435,8 @@ export default function SearchResults() {
             gap: "16px",
           }}>
             {pageData.map((w) => (
-              <div key={w.ref} className="gc watch-card"
-                   onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
+              <div key={w.catalogId ?? w.ref} className="gc watch-card"
+                   onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
                    style={{ padding: 0, display: "flex", flexDirection: "column", cursor: "pointer" }}>
                 {/* Image */}
                 <div style={{
@@ -463,7 +464,7 @@ export default function SearchResults() {
                       fontFamily: body, lineHeight: 1.3, letterSpacing: "0.3px",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
                     }}>Ref. {w.ref}</h3>
-                    <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.thumbUrl }} variant="icon" />
+                    <WatchlistToggle entry={{ catalogId: w.catalogId, ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.thumbUrl }} variant="icon" />
 
                   </div>
 
@@ -519,8 +520,8 @@ export default function SearchResults() {
 
             {/* Rows */}
             {pageData.map((w, i) => (
-              <div key={w.ref} className="watch-row"
-                   onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
+              <div key={w.catalogId ?? w.ref} className="watch-row"
+                   onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
                    style={{
                      display: "grid",
                      gridTemplateColumns: "48px 1fr 100px 90px 150px 90px 36px 32px",
@@ -587,7 +588,7 @@ export default function SearchResults() {
                   <span style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.7)", fontFamily: body }}>{w.transactions ?? 0} 条</span>
                 </div>
 
-                <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.thumbUrl }} variant="icon" />
+                <WatchlistToggle entry={{ catalogId: w.catalogId, ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.thumbUrl }} variant="icon" />
 
 
                 {/* Arrow */}

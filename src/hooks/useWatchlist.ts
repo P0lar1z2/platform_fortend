@@ -8,8 +8,10 @@ import {
   removeFromWatchlist as apiRemove,
 } from "../api/watchlist";
 import type { WatchlistServerItem } from "../api/types";
+import { getWatchIdentity } from "../lib/watchIdentity";
 
 export interface WatchlistEntry {
+  catalogId?: string;
   ref: string;
   brand?: string;
   name?: string;
@@ -28,6 +30,7 @@ function dispatch() {
 
 function serverToEntry(s: WatchlistServerItem): WatchlistEntry {
   return {
+    catalogId: s.catalogId,
     ref: s.ref,
     brand: s.brand,
     name: s.name,
@@ -70,12 +73,16 @@ export function useWatchlist() {
     (async () => {
       try {
         const resp = await apiFetch();
-        const serverRefs = new Set(resp.items.map(i => i.ref));
+        const serverIdentities = new Set(
+          resp.items.map(i => getWatchIdentity(i.ref, i.catalogId))
+        );
 
         const local = readJSON<WatchlistEntry[]>(KEY, []);
-        const toUpload = local.filter(e => !serverRefs.has(e.ref));
+        const toUpload = local.filter(
+          e => !serverIdentities.has(getWatchIdentity(e.ref, e.catalogId))
+        );
         await Promise.all(
-          toUpload.map(e => apiAdd(e.ref).catch(() => null))
+          toUpload.map(e => apiAdd(e.ref, e.catalogId).catch(() => null))
         );
 
         const authoritative = await apiFetch();
@@ -89,11 +96,20 @@ export function useWatchlist() {
     })();
   }, [user, authLoading]);
 
-  const isWatched = useCallback((ref: string) => list.some(e => e.ref === ref), [list]);
+  const isWatched = useCallback(
+    (ref: string, catalogId?: string) => {
+      const identity = getWatchIdentity(ref, catalogId);
+      return list.some(e => getWatchIdentity(e.ref, e.catalogId) === identity);
+    },
+    [list],
+  );
 
   const add = useCallback((entry: Omit<WatchlistEntry, "addedAt">): AddResult => {
     const cur = readJSON<WatchlistEntry[]>(KEY, []);
-    if (cur.some(e => e.ref === entry.ref)) return { ok: false, reason: "duplicate" };
+    const identity = getWatchIdentity(entry.ref, entry.catalogId);
+    if (cur.some(e => getWatchIdentity(e.ref, e.catalogId) === identity)) {
+      return { ok: false, reason: "duplicate" };
+    }
     if (cur.length >= WATCHLIST_CAPACITY) return { ok: false, reason: "full" };
     const full: WatchlistEntry = { ...entry, addedAt: Date.now() };
     const next = [full, ...cur];
@@ -102,8 +118,10 @@ export function useWatchlist() {
     dispatch();
 
     if (user) {
-      apiAdd(entry.ref).catch(() => {
-        const rolled = readJSON<WatchlistEntry[]>(KEY, []).filter(e => e.ref !== entry.ref);
+      apiAdd(entry.ref, entry.catalogId).catch(() => {
+        const rolled = readJSON<WatchlistEntry[]>(KEY, []).filter(
+          e => getWatchIdentity(e.ref, e.catalogId) !== identity
+        );
         writeJSON(KEY, rolled);
         setList(rolled);
         dispatch();
@@ -113,17 +131,21 @@ export function useWatchlist() {
     return { ok: true, entry: full };
   }, [user]);
 
-  const remove = useCallback((ref: string) => {
+  const remove = useCallback((ref: string, catalogId?: string) => {
     const cur = readJSON<WatchlistEntry[]>(KEY, []);
-    const removed = cur.find(e => e.ref === ref);
-    const next = cur.filter(e => e.ref !== ref);
+    const identity = getWatchIdentity(ref, catalogId);
+    const removed = cur.find(e => getWatchIdentity(e.ref, e.catalogId) === identity);
+    const next = cur.filter(e => getWatchIdentity(e.ref, e.catalogId) !== identity);
     writeJSON(KEY, next);
     setList(next);
     dispatch();
 
     if (user && removed) {
-      apiRemove(ref).catch(() => {
-        const restored = [removed, ...readJSON<WatchlistEntry[]>(KEY, [])];
+      apiRemove(ref, catalogId).catch(() => {
+        const existing = readJSON<WatchlistEntry[]>(KEY, []);
+        const restored = existing.some(
+          e => getWatchIdentity(e.ref, e.catalogId) === identity
+        ) ? existing : [removed, ...existing];
         writeJSON(KEY, restored);
         setList(restored);
         dispatch();
@@ -132,8 +154,8 @@ export function useWatchlist() {
   }, [user]);
 
   const toggle = useCallback((entry: Omit<WatchlistEntry, "addedAt">): AddResult | { ok: true; removed: true } => {
-    if (isWatched(entry.ref)) {
-      remove(entry.ref);
+    if (isWatched(entry.ref, entry.catalogId)) {
+      remove(entry.ref, entry.catalogId);
       return { ok: true, removed: true };
     }
     return add(entry);

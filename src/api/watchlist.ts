@@ -13,17 +13,19 @@ export async function fetchWatchlist(): Promise<WatchlistResponse> {
   return { items: [], count: 0, capacity: WATCHLIST_CAPACITY };
 }
 
-export async function addToWatchlist(ref: string): Promise<WatchlistServerItem> {
+export async function addToWatchlist(ref: string, catalogId?: string): Promise<WatchlistServerItem> {
   if (!API_MOCK) {
-    const { data } = await apiClient.post<WatchlistServerItem>("/watchlist", { ref });
+    const { data } = await apiClient.post<WatchlistServerItem>("/watchlist", { ref, catalogId });
     return data;
   }
-  return { ref, addedAt: new Date().toISOString() };
+  return { ref, catalogId, addedAt: new Date().toISOString() };
 }
 
-export async function removeFromWatchlist(ref: string): Promise<void> {
+export async function removeFromWatchlist(ref: string, catalogId?: string): Promise<void> {
   if (!API_MOCK) {
-    await apiClient.delete(`/watchlist/${encodeURIComponent(ref)}`);
+    await apiClient.delete(`/watchlist/${encodeURIComponent(ref)}`, {
+      params: catalogId ? { catalog_id: catalogId } : undefined,
+    });
     return;
   }
 }

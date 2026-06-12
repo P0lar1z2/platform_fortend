@@ -18,7 +18,7 @@ export default function WatchlistToggle({ entry, variant = "icon", style }: Prop
   const { user } = useAuth();
   const toast = useToast();
   const [showGate, setShowGate] = useState(false);
-  const watched = isWatched(entry.ref);
+  const watched = isWatched(entry.ref, entry.catalogId);
   const disabled = !watched && isFull;
 
   function onClick(e: React.MouseEvent) {

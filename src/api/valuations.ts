@@ -2,9 +2,11 @@ import { apiClient, API_MOCK } from "./client";
 import type { ValuationRequest, ValuationResponse, PriceRange } from "./types";
 
 // PDF 4.3 价格校验
-export async function fetchPriceRange(ref: string): Promise<PriceRange> {
+export async function fetchPriceRange(ref: string, catalogId?: string): Promise<PriceRange> {
   if (!API_MOCK) {
-    const { data } = await apiClient.get<PriceRange>(`/watches/${encodeURIComponent(ref)}/price-range`);
+    const { data } = await apiClient.get<PriceRange>(`/watches/${encodeURIComponent(ref)}/price-range`, {
+      params: { catalog_id: catalogId },
+    });
     return data;
   }
   await sleep(120);

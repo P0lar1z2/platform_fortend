@@ -6,6 +6,7 @@ import type { DecisionKey, ValuationLevel } from "../lib/labels";
 
 export interface ValuationRequest {
   ref: string;
+  catalogId?: string;
   mode: "price" | "margin";
   value: number;
   source: "all" | DataSourceKey;
@@ -84,6 +85,7 @@ export interface WatchField {
 }
 
 export interface WatchInfo {
+  catalogId?: string;
   ref: string;
   brand: string;
   brandSlug: string;
@@ -94,6 +96,7 @@ export interface WatchInfo {
 }
 
 export interface WatchListItem {
+  catalogId?: string;
   ref: string;
   brand: string;
   brandSlug: string;
@@ -186,6 +189,7 @@ export interface BrandDetail {
 // ─── Watchlist ─────────────────────────────────────────
 
 export interface WatchlistServerItem {
+  catalogId?: string;
   ref: string;
   brand?: string;
   name?: string;

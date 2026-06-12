@@ -27,6 +27,7 @@ import AppHeader from "../components/AppHeader";
 import { getBrand } from "../api/brands";
 import type { BrandDetail, WatchListItem } from "../api/types";
 import { buildPageList } from "../utils/pagination";
+import { getWatchHref } from "../lib/watchRoutes";
 
 // ─── MOCK DATA ───────────────────────────────────────────
 const BRAND = {
@@ -243,8 +244,8 @@ export default function BrandModels() {
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"}}>
             {pageData.map(w => {
               return (
-                <div key={w.ref} className="gc watch-card"
-                     onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
+                <div key={w.catalogId ?? w.ref} className="gc watch-card"
+                     onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
                      style={{padding:0,display:"flex",flexDirection:"column"}}>
                   <div style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
                     <WatchImage src={w.thumbUrl} alt={w.name} size={160}/>
@@ -257,7 +258,7 @@ export default function BrandModels() {
                     </div>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"3px"}}>
                       <h3 style={{fontSize:"15px",fontWeight:600,color:"#fff",fontFamily:bd,letterSpacing:"0.3px",lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>Ref. {w.ref}</h3>
-                      <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name }} variant="icon" />
+                      <WatchlistToggle entry={{ catalogId: w.catalogId, ref: w.ref, brand: w.brand, name: w.name }} variant="icon" />
                     </div>
                     {/* Name */}
                     <p style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,marginBottom:"12px"}}>{w.name}</p>
@@ -293,8 +294,8 @@ export default function BrandModels() {
             {/* Rows */}
             {pageData.map((w,i) => {
               return (
-                <div key={w.ref} className="watch-row"
-                     onClick={() => navigate(`/watch/${encodeURIComponent(w.ref)}`)}
+                <div key={w.catalogId ?? w.ref} className="watch-row"
+                     onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
                      style={{display:"grid",gridTemplateColumns:"48px 1fr 100px 90px 150px 90px 36px 36px",padding:"10px 20px",gap:"12px",borderBottom:i<pageData.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail */}
                   <div style={{width:"42px",height:"42px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
@@ -313,7 +314,7 @@ export default function BrandModels() {
                     <div style={{width:"5px",height:"5px",borderRadius:"50%",background:"#22c55e",flexShrink:0}}/>
                     <span style={{fontSize:"13px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>{w.transactions ?? 0} 条</span>
                   </div>
-                  <WatchlistToggle entry={{ ref: w.ref, brand: w.brand, name: w.name }} variant="icon" />
+                  <WatchlistToggle entry={{ catalogId: w.catalogId, ref: w.ref, brand: w.brand, name: w.name }} variant="icon" />
                   <div style={{display:"flex",justifyContent:"center"}}><ChevronRight size={15} color="rgba(255,255,255,0.2)"/></div>
                 </div>
               );
