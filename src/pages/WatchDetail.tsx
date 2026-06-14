@@ -22,6 +22,8 @@ import { Link, useParams } from "react-router-dom";
 import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
 import AppHeader from "../components/AppHeader";
+import { LoginActionGate } from "../components/LoginGate";
+import { useAuth } from "../hooks/useAuth";
 import { DATA_SOURCES as SHARED_DATA_SOURCES, DATA_SOURCE_BY_KEY } from "../lib/constants";
 import { decisionMeta, valuationLevelLabel } from "../lib/labels";
 import { getExternalListingHref } from "../lib/externalListings";
@@ -223,6 +225,9 @@ export default function WatchDetail() {
 
   // PDF 4.1/4.2: Section A 表款信息 + Section B 市场数据 走 API
   const ref = routeRef ?? "126610LN";
+  const { user } = useAuth();
+  // 游客点"设置交易预期"时拦截引导登录。
+  const [showTxGate, setShowTxGate] = useState(false);
   const [watch, setWatch] = useState<WatchInfo | null>(null);
   const [watchError, setWatchError] = useState<string | null>(null);
   const [market, setMarket] = useState<MarketResponse | null>(null);
@@ -477,7 +482,12 @@ export default function WatchDetail() {
               entry={{ ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }}
               variant="wide"
             />
-            <button className="gs cb" onClick={()=>document.getElementById('trading-section')?.scrollIntoView({behavior:'smooth'})} style={{padding:"11px 20px",fontSize:"13px",fontWeight:500,color:"#fff",cursor:"pointer",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"9999px",background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:"6px",fontFamily:bd}}><Target size={14}/> 设置交易预期</button>
+            <span style={{position:"relative",display:"inline-flex"}}>
+              <button className="gs cb" onClick={()=>{ if(!user){ setShowTxGate(true); return; } document.getElementById('trading-section')?.scrollIntoView({behavior:'smooth'}); }} style={{padding:"11px 20px",fontSize:"13px",fontWeight:500,color:"#fff",cursor:"pointer",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"9999px",background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:"6px",fontFamily:bd}}><Target size={14}/> 设置交易预期</button>
+              {showTxGate && (
+                <LoginActionGate onClose={()=>setShowTxGate(false)} style={{ top: "calc(100% + 8px)", left: 0 }} />
+              )}
+            </span>
           </div>
         </section>
 
