@@ -7,10 +7,11 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { listBrands } from "../api/brands";
 import type { BrandSummary } from "../api/types";
+import AppHeader from "../components/AppHeader";
 
 const hd = "'Instrument Serif','Noto Serif SC',serif";
 const bd = "'Barlow','Noto Sans SC',sans-serif";
@@ -38,6 +39,7 @@ function brandNameQuality(name?: string | null) {
   const letters = text.replace(/[^A-Za-z]/g, "");
   const isAllCaps = letters.length > 1 && letters === letters.toUpperCase();
   const isAllLower = letters.length > 1 && letters === letters.toLowerCase();
+
   return (looksMojibake(text) ? -20 : 20)
     + (/[A-Z]/.test(letters) && /[a-z]/.test(letters) ? 8 : 0)
     + (isAllCaps ? -4 : 0)
@@ -157,34 +159,7 @@ export default function BrandList() {
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
 
-      {/* ═══ NAV ═══ */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:50,padding:"12px 40px",background:"rgba(10,10,10,0.6)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <Link to="/" style={{display:"flex",alignItems:"center",gap:"10px"}}>
-            <img src="/logo/raventik_logo_nav_32.png" width={32} height={32} style={{borderRadius:"8px",objectFit:"contain"}} alt="Raventik"/>
-            <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"20px",color:"#fff",letterSpacing:"-0.5px"}}>Raventik</span>
-          </Link>
-          <div className="gp" style={{display:"flex",alignItems:"center",gap:"2px",padding:"4px 6px"}}>
-            {[
-              { to: "/", label: "首页" },
-              { to: "/brands", label: "品牌列表" },
-              { to: "/config", label: "配置表" },
-              { to: "/watchlist", label: "关注列表" },
-            ].map(item => {
-              const active = item.to === "/brands";
-              return (
-                <Link key={item.to} to={item.to} style={{
-                  padding: "6px 12px", fontSize: "12px", fontWeight: 400,
-                  borderRadius: "9999px",
-                  color: active ? "#fff" : "rgba(255,255,255,0.7)",
-                  background: active ? "rgba(255,255,255,0.08)" : "transparent",
-                  textDecoration: "none", fontFamily: bd, transition: "all 0.2s",
-                }}>{item.label}</Link>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
+      <AppHeader />
 
       {/* Ambient orbs */}
       <div style={{position:"fixed",top:"5%",left:"10%",width:"600px",height:"500px",background:"radial-gradient(ellipse,rgba(80,120,200,0.06) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>
@@ -200,12 +175,10 @@ export default function BrandList() {
             <h1 style={{fontFamily:"'Noto Serif SC',serif",fontSize:"clamp(32px,4vw,46px)",color:"#fff",letterSpacing:"-1px",lineHeight:1.1,fontWeight:700,marginBottom:"8px"}}>按品牌探索</h1>
           </div>
 
-          {/* Subtitle + Alphabet filter — same line */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"20px"}}>
             <p style={{fontSize:"14px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>
               {loading ? "加载中..." : err ? err : `覆盖 ${dedupedBrands.length} 个主流品牌,跨平台历史交易数据聚合。`}
             </p>
-
           </div>
 
           {!loading && !err && dedupedBrands.length > 0 && (

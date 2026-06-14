@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Search, TrendingUp, TrendingDown, ChevronRight, Eye, BarChart3, Globe, Database, Clock, Star, ArrowRight, X } from "lucide-react";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { truncate20 } from "../lib/labels";
-import UserMenu from "../components/UserMenu";
 import BrandSelect from "../components/BrandSelect";
+import AppHeader from "../components/AppHeader";
 
 // ─── MOCK DATA ───────────────────────────────────────────
 const STATS = [
@@ -114,7 +114,6 @@ function PriceDistribution() {
 export default function RaventikCN() {
   const [searchValue, setSearchValue] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("全部");
-  const [logoHover, setLogoHover] = useState(false);
   const [hoveredHistory, setHoveredHistory] = useState<string | null>(null);
   const navigate = useNavigate();
   const { history, push: pushHistory, remove: removeHistory } = useSearchHistory();
@@ -284,50 +283,7 @@ export default function RaventikCN() {
         ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:3px; }
       `}</style>
 
-      {/* ═══ NAVBAR ═══ */}
-      <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-        padding: "16px 40px",
-        background: "rgba(10,10,10,0.6)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-      }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "10px" }}
-                onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
-            <img
-              src={logoHover
-                ? "/logo-hover/raventik_holographic_smoke_chrome_64x64.png"
-                : "/logo/raventik_logo_nav_32.png"}
-              width={32} height={32}
-              style={{ borderRadius: "8px", objectFit: "contain", transition: "opacity 200ms" }}
-              alt="Raventik"
-            />
-            <span style={{ fontFamily: heading, fontStyle: "italic", fontSize: "22px", color: "#fff", letterSpacing: "-0.5px" }}>Raventik</span>
-          </Link>
-
-          <div className="gp" style={{ display: "flex", alignItems: "center", gap: "2px", padding: "4px 6px" }}>
-            {[
-              { to: "/", label: "首页" },
-              { to: "/brands", label: "品牌列表" },
-              { to: "/config", label: "配置表" },
-              { to: "/watchlist", label: "关注列表" },
-            ].map(item => (
-              <Link key={item.to} to={item.to} style={{
-                padding: "6px 14px", fontSize: "13px", fontWeight: 400,
-                color: "rgba(255,255,255,0.8)", textDecoration: "none",
-                borderRadius: "9999px", transition: "all 0.2s ease",
-                fontFamily: body,
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; (e.currentTarget as HTMLElement).style.color = "#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.8)"; }}
-              >{item.label}</Link>
-            ))}
-            <UserMenu variant="filled" />
-          </div>
-        </div>
-      </nav>
+      <AppHeader />
 
       {/* ═══ HERO ═══ */}
       <section style={{

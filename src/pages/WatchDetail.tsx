@@ -18,9 +18,10 @@
  */
 
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, Search } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
+import AppHeader from "../components/AppHeader";
 import { DATA_SOURCES as SHARED_DATA_SOURCES, DATA_SOURCE_BY_KEY } from "../lib/constants";
 import { decisionMeta, valuationLevelLabel } from "../lib/labels";
 import { getExternalListingHref } from "../lib/externalListings";
@@ -218,9 +219,7 @@ function ExternalListingLink({
 /* ─── MAIN ──────────────────────────────────────────────── */
 
 export default function WatchDetail() {
-  const navigate = useNavigate();
   const { ref: routeRef } = useParams<{ ref: string }>();
-  void navigate;
 
   // PDF 4.1/4.2: Section A 表款信息 + Section B 市场数据 走 API
   const ref = routeRef ?? "126610LN";
@@ -399,26 +398,7 @@ export default function WatchDetail() {
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
 
-      {/* ═══ NAV ═══ */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:50,padding:"12px 40px",background:"rgba(10,10,10,0.6)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <Link to="/" style={{display:"flex",alignItems:"center",gap:"10px"}}>
-            <img src="/logo/raventik_logo_nav_32.png" width={32} height={32}
-                 style={{borderRadius:"8px",objectFit:"contain"}} alt="Raventik"/>
-            <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"20px",color:"#fff",letterSpacing:"-0.5px"}}>Raventik</span>
-          </Link>
-          <div className="gp" style={{display:"flex",alignItems:"center",gap:"2px",padding:"4px 6px"}}>
-            {[
-              { to: "/", label: "首页" },
-              { to: "/brands", label: "品牌列表" },
-              { to: "/config", label: "配置表" },
-              { to: "/watchlist", label: "关注列表" },
-            ].map(item => (
-              <Link key={item.to} to={item.to} style={{padding:"6px 12px",fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.7)",textDecoration:"none",borderRadius:"9999px",fontFamily:bd}}>{item.label}</Link>
-            ))}
-          </div>
-        </div>
-      </nav>
+      <AppHeader />
 
       {/* Ambient */}
       <div style={{position:"fixed",top:0,left:"10%",width:"600px",height:"500px",background:"radial-gradient(ellipse,rgba(80,120,200,0.06) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>

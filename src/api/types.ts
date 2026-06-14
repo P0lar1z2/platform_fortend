@@ -204,6 +204,8 @@ export interface WatchlistResponse {
 export interface AuthUser {
   id: string;
   email: string;
+  /** "user"（默认）| "operator"。operator 可访问运营页面(配置表/闲鱼后台等)。 */
+  role?: string;
   createdAt?: string;
 }
 
@@ -234,4 +236,104 @@ export interface ConfigGlobal {
 export interface ConfigDoc {
   sources: ConfigSource[];
   global: ConfigGlobal;
+}
+
+// ─── Goofish 账号管理 ──────────────────────────────────
+
+export interface GoofishAccount {
+  account: string;
+  status?: string;       // DB 持久状态：logged_in / anonymous / unknown
+  liveStatus?: string;   // 内存会话状态：pending / need_face / expired / error...
+  unb?: string | null;
+  updatedAt?: number | null;  // epoch 秒
+}
+
+export interface GoofishStatus {
+  account: string;
+  status: string;
+  qrcode?: string | null;     // 登录二维码 base64(png)
+  faceQrcode?: string | null; // 人脸验证二维码 base64(png)
+  unb?: string | null;
+}
+
+export interface GoofishCookie {
+  account: string;
+  unb: string;
+  tracknick?: string | null;
+  mtopCookie: string;
+  cookies: Array<{ name: string; value: string; [k: string]: unknown }>;
+}
+
+// ─── Goofish 订阅与通知测试 ───────────────────────────
+
+export interface GoofishSellerSubscription {
+  _id?: string;
+  owner_user_id?: string;
+  seller_id: string;
+  seller_name?: string | null;
+  note?: string | null;
+  enabled: boolean;
+  crawl_interval_minutes: number;
+  last_crawled_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoofishRefSubscription {
+  _id?: string;
+  owner_user_id?: string;
+  reference: string;
+  brand?: string | null;
+  keyword: string;
+  note?: string | null;
+  enabled: boolean;
+  crawl_interval_minutes: number;
+  last_crawled_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoofishItem {
+  _id?: string;
+  item_id: string;
+  seller_id?: string | null;
+  title: string;
+  raw_price?: string | null;
+  price_cny?: number | null;
+  source_url: string;
+  images: string[];
+  status: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  detail_requested_at?: string | null;
+  processed_at?: string | null;
+}
+
+export interface GoofishOpportunity {
+  _id?: string;
+  owner_user_id?: string;
+  subscription_kind?: "seller" | "ref" | null;
+  subscription_key?: string | null;
+  item_id: string;
+  seller_id?: string | null;
+  title: string;
+  source_url: string;
+  matched_reference?: string | null;
+  brand?: string | null;
+  estimated_revenue?: number | null;
+  total_cost?: number | null;
+  profit_margin?: number | null;
+  decision: string;
+  created_at: string;
+}
+
+export interface LarkBindCode {
+  code: string;
+  expires_at: string;
+}
+
+export interface LarkBindingStatus {
+  bound: boolean;
+  open_id_suffix?: string | null;
+  updated_at?: string | null;
 }
