@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Bell, Copy, Key, LogIn, MessageCircle, PauseCircle, PlayCircle, Plus, RefreshCw, Trash2, Unlink, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "../components/Toast";
+import { useAuth } from "../hooks/useAuth";
+import { LoginPageGate } from "../components/LoginGate";
 import AppHeader from "../components/AppHeader";
 import {
   createLarkBindCode,
@@ -153,6 +157,10 @@ const iconBtnStyle: CSSProperties = {
 
 export default function GoofishSubscriptions() {
   const { push } = useToast();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  // 闲鱼后台为运营功能 → 仅 operator 可访问,其余(游客/普通用户)看蒙版。
+  const gated = !authLoading && (!user || user.role !== "operator");
   // 账号管理
   const [accounts, setAccounts] = useState<GoofishAccount[]>([]);
   const [newAccount, setNewAccount] = useState("");
@@ -175,7 +183,8 @@ export default function GoofishSubscriptions() {
     try {
       const [accountData, sellerData, refData, itemData, opportunityData] = await Promise.all([
         listAccounts(),
-        listSellerSubscriptions(),
+        // 商家订阅暂时移除：后端路由已停用,容错为空避免拖垮整页加载。
+        listSellerSubscriptions().catch(() => []),
         listRefSubscriptions(),
         listGoofishItems(),
         listGoofishOpportunities(),
@@ -433,7 +442,15 @@ export default function GoofishSubscriptions() {
   }
 
   return (
-    <div className="gf-page">
+    <div className="gf-page" style={gated ? { filter: "blur(4px)", pointerEvents: "none", userSelect: "none" } : undefined}>
+      {gated && createPortal(
+        <LoginPageGate
+          onClose={() => navigate("/")}
+          title="闲鱼后台为运营功能"
+          description="该页面用于闲鱼账号与抓取订阅管理，仅运营账号可访问。如需开通请联系管理员。"
+        />,
+        document.body,
+      )}
       <style>{`
         .gf-page{min-height:100vh;background:#090909;color:#fff;font-family:'Barlow','Noto Sans SC',sans-serif}
         .gf-main{max-width:1180px;margin:0 auto;padding:96px 40px 56px}
@@ -571,6 +588,8 @@ export default function GoofishSubscriptions() {
         </section>
 
         <div className="gf-grid">
+          {/* 商家订阅暂时移除（注释掉）：后端 seller-subscriptions 路由已停用,与"商家订阅暂时移除"方向一致。如需恢复:把 false 改回，并恢复后端路由。 */}
+          {false && (
           <section className="panel">
             <div className="panel-head"><h2>商家订阅</h2><Bell size={16} /></div>
             <div className="form">
@@ -595,6 +614,7 @@ export default function GoofishSubscriptions() {
               ))}
             </div>
           </section>
+          )}
 
           <section className="panel">
             <div className="panel-head"><h2>ref 订阅</h2><Bell size={16} /></div>
