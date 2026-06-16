@@ -20,7 +20,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight, Eye, EyeOff } from "lucide-react";
+import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight, Eye, EyeOff, TrendingUp } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
 import WatchlistToggle from "../components/WatchlistToggle";
 import AppHeader from "../components/AppHeader";
@@ -89,6 +89,7 @@ export default function BrandModels() {
   const [familyFilter, setFamilyFilter] = useState("全部");
   const [showFilters, setShowFilters] = useState(false);
   const [showZeroTransactions, setShowZeroTransactions] = useState(false); // 默认隐藏 0 交易型号
+  const [sortByTx, setSortByTx] = useState(true); // 默认按成交数从多到少；关闭则按 ref 字母序
 
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
@@ -121,10 +122,11 @@ export default function BrandModels() {
   const page = Math.min(currentPage, totalPages);
   const pageData: WatchListItem[] = useMemo(
     () => [...(detail?.watches.items ?? [])].sort((a, b) => {
+      if (!sortByTx) return a.ref.localeCompare(b.ref);
       const byTransactions = (b.transactions ?? 0) - (a.transactions ?? 0);
       return byTransactions || a.ref.localeCompare(b.ref);
     }),
-    [detail?.watches.items],
+    [detail?.watches.items, sortByTx],
   );
 
   const goPage = (p: number) => { setCurrentPage(Math.max(1, Math.min(p, totalPages))); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -213,6 +215,10 @@ export default function BrandModels() {
         <div className="mobile-toolbar" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
           <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{loading ? "加载中..." : `共 ${total} 个型号`}</p>
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+            <button className="mode-btn" onClick={() => setSortByTx(v => !v)} title={sortByTx ? "当前：按成交数排序（点击切字母序）" : "当前：字母序（点击按成交数排序）"} aria-pressed={sortByTx} style={{width:"auto",padding:"0 12px",gap:"6px",background:sortByTx?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",color:"#fff"}}>
+              <TrendingUp size={16} color={sortByTx?"#fff":"rgba(255,255,255,0.5)"}/>
+              <span style={{fontSize:"12px",fontWeight:500,fontFamily:bd,color:sortByTx?"#fff":"rgba(255,255,255,0.5)"}}>成交</span>
+            </button>
             <button className="mode-btn" onClick={() => { setShowZeroTransactions(v => !v); setCurrentPage(1); }} title={showZeroTransactions ? "隐藏 0 条交易记录的型号" : "显示 0 条交易记录的型号"} aria-pressed={showZeroTransactions} style={{width:"auto",padding:"0 12px",gap:"6px",background:showZeroTransactions?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",color:"#fff"}}>
               {showZeroTransactions ? <Eye size={16}/> : <EyeOff size={16} color="rgba(255,255,255,0.5)"/>}
               <span style={{fontSize:"12px",fontWeight:500,fontFamily:bd}}>0 条</span>
