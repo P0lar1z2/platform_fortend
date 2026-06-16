@@ -18,7 +18,7 @@
  * ============================================================
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight, Eye, EyeOff, TrendingUp } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
@@ -107,27 +107,21 @@ export default function BrandModels() {
       family: familyFilter === "全部" ? undefined : familyFilter,
       page: currentPage,
       size: PER_PAGE,
-      sort_by: "transactions",
-      sort_dir: "desc",
+      sort_by: sortByTx ? "transactions" : undefined,
+      sort_dir: sortByTx ? "desc" : undefined,
       include_zero: showZeroTransactions,
     })
       .then(d => setDetail(d))
       .catch(() => setDetail(null))
       .finally(() => setLoading(false));
-  }, [effectiveSlug, familyFilter, currentPage, showZeroTransactions]);
+  }, [effectiveSlug, familyFilter, currentPage, showZeroTransactions, sortByTx]);
 
   const families = ["全部", ...(detail?.families ?? [])];
   const total = detail?.watches.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(currentPage, totalPages);
-  const pageData: WatchListItem[] = useMemo(
-    () => [...(detail?.watches.items ?? [])].sort((a, b) => {
-      if (!sortByTx) return a.ref.localeCompare(b.ref);
-      const byTransactions = (b.transactions ?? 0) - (a.transactions ?? 0);
-      return byTransactions || a.ref.localeCompare(b.ref);
-    }),
-    [detail?.watches.items, sortByTx],
-  );
+  // 排序由服务端完成（按成交数 desc 跨页，或字母序），前端直接用返回顺序。
+  const pageData: WatchListItem[] = detail?.watches.items ?? [];
 
   const goPage = (p: number) => { setCurrentPage(Math.max(1, Math.min(p, totalPages))); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
@@ -215,7 +209,7 @@ export default function BrandModels() {
         <div className="mobile-toolbar" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
           <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{loading ? "加载中..." : `共 ${total} 个型号`}</p>
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-            <button className="mode-btn" onClick={() => setSortByTx(v => !v)} title={sortByTx ? "当前：按成交数排序（点击切字母序）" : "当前：字母序（点击按成交数排序）"} aria-pressed={sortByTx} style={{width:"auto",padding:"0 12px",gap:"6px",background:sortByTx?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",color:"#fff"}}>
+            <button className="mode-btn" onClick={() => { setSortByTx(v => !v); setCurrentPage(1); }} title={sortByTx ? "当前：按成交数排序（点击切字母序）" : "当前：字母序（点击按成交数排序）"} aria-pressed={sortByTx} style={{width:"auto",padding:"0 12px",gap:"6px",background:sortByTx?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",color:"#fff"}}>
               <TrendingUp size={16} color={sortByTx?"#fff":"rgba(255,255,255,0.5)"}/>
               <span style={{fontSize:"12px",fontWeight:500,fontFamily:bd,color:sortByTx?"#fff":"rgba(255,255,255,0.5)"}}>成交</span>
             </button>
