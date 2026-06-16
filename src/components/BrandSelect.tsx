@@ -46,7 +46,7 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
   const rootRef = useRef<HTMLDivElement | null>(null);
   const popRef = useRef<HTMLDivElement | null>(null);
   const letterRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; listMaxHeight: number } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -134,7 +134,21 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
     if (!open) return;
     function update() {
       const r = rootRef.current?.getBoundingClientRect();
-      if (r) setPos({ top: r.bottom + 6, left: r.left });
+      if (!r) return;
+      const margin = 16;            // 与视口上下边的留白
+      const headerArea = 116;       // 下拉内搜索框 + 字母条 + 容器纵向 padding 的占位
+      const gap = 6;                // 下拉与按钮的间距
+      const desiredList = 288;      // 列表区理想最大高度
+      const spaceBelow = window.innerHeight - r.bottom - margin;
+      const spaceAbove = r.top - margin;
+      // 下方放得下、或下方比上方宽裕就向下展开，否则向上翻转。
+      if (spaceBelow >= headerArea + 160 || spaceBelow >= spaceAbove) {
+        const listMaxHeight = Math.max(140, Math.min(desiredList, spaceBelow - headerArea - gap));
+        setPos({ top: r.bottom + gap, left: r.left, listMaxHeight });
+      } else {
+        const listMaxHeight = Math.max(140, Math.min(desiredList, spaceAbove - headerArea - gap));
+        setPos({ bottom: window.innerHeight - r.top + gap, left: r.left, listMaxHeight });
+      }
     }
     update();
     window.addEventListener("scroll", update, true);
@@ -199,6 +213,7 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
           style={{
             position: "fixed",
             top: pos.top,
+            bottom: pos.bottom,
             left: pos.left,
             width: compact ? 318 : 340,
             maxWidth: "calc(100vw - 32px)",
@@ -256,7 +271,7 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
             ))}
           </div>
 
-          <div key={`${activeLetter}:${q}`} style={{ maxHeight: 288, overflowY: "auto", paddingRight: "2px" }}>
+          <div key={`${activeLetter}:${q}`} style={{ maxHeight: pos.listMaxHeight, overflowY: "auto", paddingRight: "2px" }}>
             <button
               type="button"
               onClick={() => choose(ALL_BRANDS)}
