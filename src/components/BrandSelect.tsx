@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { listBrands } from "../api/brands";
 import type { BrandSummary } from "../api/types";
@@ -43,7 +44,9 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
   const [query, setQuery] = useState("");
   const [letter, setLetter] = useState(ALL_BRANDS);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const popRef = useRef<HTMLDivElement | null>(null);
   const letterRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -59,7 +62,8 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (!rootRef.current?.contains(target) && !popRef.current?.contains(target)) setOpen(false);
     }
     function onKeyDown(e: globalThis.KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -124,6 +128,23 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
     letterRefs.current[letter]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [letter, open]);
 
+  // 下拉用 portal 渲染到 body，避免被祖先的 overflow:hidden 裁切或被后续 section 盖住。
+  // fixed 定位需要按按钮在视口中的位置实时计算，并随滚动/缩放更新。
+  useLayoutEffect(() => {
+    if (!open) return;
+    function update() {
+      const r = rootRef.current?.getBoundingClientRect();
+      if (r) setPos({ top: r.bottom + 6, left: r.left });
+    }
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open, compact]);
+
   function handleRootKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const target = e.target as HTMLElement | null;
     if (target?.tagName === "INPUT") return;
@@ -171,13 +192,14 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
         <ChevronDown size={14} color="rgba(255,255,255,0.42)" style={{ flexShrink: 0 }} />
       </button>
 
-      {open && (
+      {open && pos && createPortal(
         <div
+          ref={popRef}
           role="listbox"
           style={{
-            position: "absolute",
-            top: compact ? 42 : 48,
-            left: 0,
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
             width: compact ? 318 : 340,
             maxWidth: "calc(100vw - 32px)",
             padding: "12px",
@@ -187,7 +209,7 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
             boxShadow: "0 18px 50px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.08)",
             backdropFilter: "blur(22px)",
             WebkitBackdropFilter: "blur(22px)",
-            zIndex: 100,
+            zIndex: 1000,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "10px", background: "rgba(255,255,255,0.06)", marginBottom: "10px" }}>
@@ -297,7 +319,8 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
