@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark, TrendingUp, CornerDownRight } from "lucide-react";
+import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark, TrendingUp, CornerDownRight, Eye, EyeOff } from "lucide-react";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useWatchlist } from "../hooks/useWatchlist";
@@ -88,6 +88,7 @@ export default function SearchResults() {
   const urlBrand = params.get("brand") || "全部";
   const urlPage = Math.max(1, Number(params.get("page") || 1));
   const urlSort = params.get("sort") || "tx_desc"; // 默认按成交数排序
+  const showZeroTransactions = params.get("includeZero") === "1"; // 默认隐藏 0 交易型号
 
   const [searchValue, setSearchValue] = useState(urlQ);
   const [viewMode, setViewMode] = useViewPreference<"card" | "list">("search-view", "card");
@@ -141,12 +142,13 @@ export default function SearchResults() {
       page: urlPage,
       size: PER_PAGE,
       sort: urlSort,
+      include_zero: showZeroTransactions,
     })
       .then(r => { if (!alive) return; setPageData(r.items); setTotal(r.total); })
       .catch(() => { if (!alive) return; setPageData([]); setTotal(0); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; }; // 丢弃过期请求，避免旧结果覆盖新搜索
-  }, [urlQ, urlBrand, urlPage, urlSort]);
+  }, [urlQ, urlBrand, urlPage, urlSort, showZeroTransactions]);
 
   const brands = ["全部", ...brandNames];
 
@@ -391,6 +393,15 @@ export default function SearchResults() {
             }}>
               <TrendingUp size={16} color={urlSort === "tx_desc" ? "#fff" : "rgba(255,255,255,0.5)"} />
               <span style={{ fontSize: "12px", fontWeight: 500, color: urlSort === "tx_desc" ? "#fff" : "rgba(255,255,255,0.5)" }}>成交</span>
+            </button>
+
+            {/* Zero-transaction toggle: 默认隐藏 0 交易型号，点击显示 */}
+            <button className="mode-btn" onClick={() => updateParams({ includeZero: showZeroTransactions ? null : 1, page: 1 })} title={showZeroTransactions ? "隐藏 0 条交易记录的型号" : "显示 0 条交易记录的型号"} aria-pressed={showZeroTransactions} style={{
+              background: showZeroTransactions ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
+              color: "#fff", width: "auto", padding: "0 12px", display: "flex", alignItems: "center", gap: "6px",
+            }}>
+              {showZeroTransactions ? <Eye size={16} /> : <EyeOff size={16} color="rgba(255,255,255,0.5)" />}
+              <span style={{ fontSize: "12px", fontWeight: 500, color: showZeroTransactions ? "#fff" : "rgba(255,255,255,0.5)" }}>0 条</span>
             </button>
 
             {/* Divider */}

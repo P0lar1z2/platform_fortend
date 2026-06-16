@@ -20,7 +20,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight } from "lucide-react";
+import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight, Eye, EyeOff } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
 import WatchlistToggle from "../components/WatchlistToggle";
 import AppHeader from "../components/AppHeader";
@@ -88,6 +88,7 @@ export default function BrandModels() {
   const [pageJump, setPageJump] = useState("1");
   const [familyFilter, setFamilyFilter] = useState("全部");
   const [showFilters, setShowFilters] = useState(false);
+  const [showZeroTransactions, setShowZeroTransactions] = useState(false); // 默认隐藏 0 交易型号
 
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
@@ -107,11 +108,12 @@ export default function BrandModels() {
       size: PER_PAGE,
       sort_by: "transactions",
       sort_dir: "desc",
+      include_zero: showZeroTransactions,
     })
       .then(d => setDetail(d))
       .catch(() => setDetail(null))
       .finally(() => setLoading(false));
-  }, [effectiveSlug, familyFilter, currentPage]);
+  }, [effectiveSlug, familyFilter, currentPage, showZeroTransactions]);
 
   const families = ["全部", ...(detail?.families ?? [])];
   const total = detail?.watches.total ?? 0;
@@ -211,6 +213,10 @@ export default function BrandModels() {
         <div className="mobile-toolbar" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
           <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{loading ? "加载中..." : `共 ${total} 个型号`}</p>
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+            <button className="mode-btn" onClick={() => { setShowZeroTransactions(v => !v); setCurrentPage(1); }} title={showZeroTransactions ? "隐藏 0 条交易记录的型号" : "显示 0 条交易记录的型号"} aria-pressed={showZeroTransactions} style={{width:"auto",padding:"0 12px",gap:"6px",background:showZeroTransactions?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",color:"#fff"}}>
+              {showZeroTransactions ? <Eye size={16}/> : <EyeOff size={16} color="rgba(255,255,255,0.5)"/>}
+              <span style={{fontSize:"12px",fontWeight:500,fontFamily:bd}}>0 条</span>
+            </button>
             <button className="mode-btn" onClick={()=>setShowFilters(!showFilters)} style={{background:showFilters?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)"}}>
               <SlidersHorizontal size={16} color={showFilters?"#fff":"rgba(255,255,255,0.5)"}/>
             </button>
