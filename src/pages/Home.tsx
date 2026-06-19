@@ -281,12 +281,30 @@ export default function RaventikCN() {
         ::-webkit-scrollbar { width:6px; }
         ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:3px; }
+        @media (max-width:620px){
+          .home-hero{min-height:auto!important;padding:110px 16px 48px!important}
+          .home-hero h1{font-size:42px!important;line-height:1.08!important;letter-spacing:0!important}
+          .home-hero-subtitle{font-size:14px!important;line-height:1.7!important;margin-bottom:28px!important}
+          .home-search-shell{display:grid!important;grid-template-columns:auto auto minmax(0,1fr);gap:8px!important;padding:6px!important;border-radius:16px!important}
+          .home-search-shell>button{grid-column:1/-1;min-height:44px;justify-content:center!important}
+          .home-search-shell input{min-width:0;font-size:16px!important}
+          .home-section{padding:28px 16px 48px!important}
+          .home-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+          .home-stat{padding:22px 12px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.06)}
+          .home-stat:nth-last-child(-n+2){border-bottom:0}
+          .home-stat-value{font-size:28px!important}
+          .home-steps-grid{grid-template-columns:1fr!important;gap:12px!important}
+          .home-step{padding:24px 20px!important}
+          .home-step h3{font-size:22px!important}
+          .home-cta{padding:52px 16px 24px!important}
+          .home-cta h2{font-size:34px!important;letter-spacing:0!important}
+        }
       `}</style>
 
       <AppHeader />
 
       {/* ═══ HERO ═══ */}
-      <section style={{
+      <section className="home-hero" style={{
         position: "relative", minHeight: "680px",
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         padding: "140px 40px 60px", overflow: "hidden",
@@ -338,7 +356,7 @@ export default function RaventikCN() {
         </h1>
 
         {/* Subtext */}
-        <p className="fi" style={{
+        <p className="fi home-hero-subtitle" style={{
           fontSize: "15px", fontWeight: 300, color: "rgba(255,255,255,0.5)",
           textAlign: "center", maxWidth: "480px", lineHeight: 1.8,
           marginBottom: "40px", animationDelay: "0.5s", opacity: 0,
@@ -350,7 +368,7 @@ export default function RaventikCN() {
         {/* Search */}
         <form className="fi" onSubmit={e => { e.preventDefault(); submitSearch(searchValue); }}
               style={{ width: "100%", maxWidth: "580px", animationDelay: "0.7s", opacity: 0 }}>
-          <div className="sc" style={{
+          <div className="sc home-search-shell" style={{
             display: "flex", alignItems: "center", gap: "10px",
             padding: "6px 6px 6px 20px",
             borderRadius: "9999px",
@@ -419,7 +437,7 @@ export default function RaventikCN() {
       </section>
 
       {/* ═══ STATS ═══ */}
-      <section style={{ padding: "0 40px 60px", position: "relative" }}>
+      <section className="home-section" style={{ padding: "0 40px 60px", position: "relative" }}>
         {/* Ambient glow */}
         <div style={{
           position: "absolute", top: "-80px", left: "20%",
@@ -428,11 +446,11 @@ export default function RaventikCN() {
           pointerEvents: "none",
         }} />
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
-          <div className="gc" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)" }}>
+          <div className="gc home-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)" }}>
             {STATS.map((stat, i) => {
               const Icon = stat.icon;
               return (
-                <div key={i} style={{
+                <div key={i} className="home-stat" style={{
                   padding: "32px 28px", textAlign: "center",
                   borderRight: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none",
                 }}>
@@ -440,7 +458,7 @@ export default function RaventikCN() {
                     <Icon size={14} color="rgba(255,255,255,0.3)" strokeWidth={1.5} />
                     <span style={{ fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "1.5px", fontFamily: body }}>{stat.label}</span>
                   </div>
-                  <div style={{ fontFamily: heading, fontStyle: "italic", fontSize: "36px", color: "#fff", letterSpacing: "-1px" }}>
+                  <div className="home-stat-value" style={{ fontFamily: heading, fontStyle: "italic", fontSize: "36px", color: "#fff", letterSpacing: "-1px" }}>
                     <AnimatedValue value={stat.value} delay={i * 150} />
                   </div>
                 </div>
@@ -452,7 +470,7 @@ export default function RaventikCN() {
 
 
       {/* ═══ HOW IT WORKS ═══ */}
-      <section style={{ padding: "60px 40px 80px", position: "relative" }}>
+      <section className="home-section" style={{ padding: "60px 40px 80px", position: "relative" }}>
         {/* Ambient glow */}
         <div style={{
           position: "absolute", top: "0", right: "10%",
@@ -466,7 +484,7 @@ export default function RaventikCN() {
               三步，看清全貌。
             </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
+          <div className="home-steps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
             {[
               { title: "搜索", desc: "输入任意品牌、型号或 Ref Number。同时查询四大平台的全部在售信息。", icon: Search },
               { title: "比价", desc: "价格、成色、卖家、地区——所有 listings 并排呈现，最优选一目了然。", icon: Eye },
@@ -474,7 +492,7 @@ export default function RaventikCN() {
             ].map((item, i) => {
               const Icon = item.icon;
               return (
-                <div key={i} className="gc" style={{ padding: "36px 28px" }}>
+                <div key={i} className="gc home-step" style={{ padding: "36px 28px" }}>
                   <div style={{ display: "flex", alignItems: "center", marginBottom: "20px" }}>
                     <div className="gs" style={{ width: "40px", height: "40px", borderRadius: "9999px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Icon size={16} color="#fff" strokeWidth={1.5} />
@@ -490,7 +508,7 @@ export default function RaventikCN() {
       </section>
 
       {/* ═══ CTA ═══ */}
-      <section style={{ padding: "80px 40px 40px", position: "relative" }}>
+      <section className="home-cta" style={{ padding: "80px 40px 40px", position: "relative" }}>
         <div style={{
           position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)",
           width: "600px", height: "400px",

@@ -367,7 +367,7 @@ export default function SearchResults() {
         }} />
 
         {/* ─── Results header ─── */}
-        <div style={{
+        <div className="mobile-page-heading mobile-stack" style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           marginBottom: "24px", paddingTop: "12px",
         }}>
@@ -383,7 +383,7 @@ export default function SearchResults() {
             </p>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="mobile-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             {/* Sort toggle: 默认按成交数(tx_desc)，点击切回字母序(alpha) */}
             <button className="mode-btn" onClick={() => updateParams({ sort: urlSort === "tx_desc" ? "alpha" : null, page: 1 })} title={urlSort === "tx_desc" ? "当前：按成交数排序（点击切字母序）" : "当前：字母序（点击按成交数排序）"} style={{
               background: urlSort === "tx_desc" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
@@ -441,17 +441,17 @@ export default function SearchResults() {
 
         {/* ─── CARD VIEW ─── */}
         {viewMode === "card" && (
-          <div style={{
+          <div className="mobile-card-grid" style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, 1fr)",
             gap: "16px",
           }}>
             {pageData.map((w) => (
-              <div key={w.catalogId ?? w.ref} className="gc watch-card"
+              <div key={w.catalogId ?? w.ref} className="gc watch-card mobile-card"
                    onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
                    style={{ padding: 0, display: "flex", flexDirection: "column", cursor: "pointer" }}>
                 {/* Image */}
-                <div style={{
+                <div className="mobile-card-image" style={{
                   width: "100%", aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
                   background: "rgba(255,255,255,0.02)",
                   borderBottom: "1px solid rgba(255,255,255,0.06)",
@@ -461,7 +461,7 @@ export default function SearchResults() {
                 </div>
 
                 {/* Info */}
-                <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column" }}>
+                <div className="mobile-card-body" style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column" }}>
                   {/* Brand + Family */}
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                     <span style={{ fontSize: "11px", fontWeight: 500, color: "rgba(255,255,255,0.4)", fontFamily: body, textTransform: "uppercase", letterSpacing: "0.8px" }}>{w.brand}</span>
@@ -512,9 +512,9 @@ export default function SearchResults() {
 
         {/* ─── LIST VIEW ─── */}
         {viewMode === "list" && (
-          <div className="gc" style={{ padding: 0, overflow: "hidden" }}>
+          <div className="gc mobile-list-shell" style={{ padding: 0, overflow: "hidden" }}>
             {/* Table header */}
-            <div style={{
+            <div className="mobile-list-header" style={{
               display: "grid",
               gridTemplateColumns: "48px 1fr 100px 90px 150px 90px 36px 32px",
               padding: "12px 20px", gap: "12px",
@@ -532,7 +532,7 @@ export default function SearchResults() {
 
             {/* Rows */}
             {pageData.map((w, i) => (
-              <div key={w.catalogId ?? w.ref} className="watch-row"
+              <div key={w.catalogId ?? w.ref} className="watch-row mobile-list-row"
                    onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
                    style={{
                      display: "grid",
@@ -543,7 +543,7 @@ export default function SearchResults() {
                      cursor: "pointer",
                    }}>
                 {/* Thumbnail */}
-                <div style={{
+                <div className="mobile-list-thumb" style={{
                   width: "42px", height: "42px", borderRadius: "8px",
                   background: "rgba(255,255,255,0.03)",
                   border: "1px solid rgba(255,255,255,0.06)",
@@ -554,7 +554,7 @@ export default function SearchResults() {
                 </div>
 
                 {/* Ref + Brand + Name — single column, horizontal */}
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden", minWidth: 0 }}>
+                <div className="mobile-list-main" style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden", minWidth: 0 }}>
                   <span style={{
                     fontSize: "13px", fontWeight: 600, color: "#fff", fontFamily: body,
                     letterSpacing: "0.3px", whiteSpace: "nowrap", flexShrink: 0,
@@ -567,13 +567,13 @@ export default function SearchResults() {
                 </div>
 
                 {/* Family */}
-                <span style={{
+                <span className="mobile-list-secondary" style={{
                   fontSize: "12px", fontWeight: 400, color: "rgba(255,255,255,0.45)", fontFamily: body,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}>{w.family}</span>
 
                 {/* Dial Color */}
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div className="mobile-list-secondary" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <div style={{
                     width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0,
                     border: "1px solid rgba(255,255,255,0.15)",
@@ -589,22 +589,24 @@ export default function SearchResults() {
                 </div>
 
                 {/* Material */}
-                <span style={{
+                <span className="mobile-list-secondary" style={{
                   fontSize: "12px", fontWeight: 300, color: "rgba(255,255,255,0.4)", fontFamily: body,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}>{w.material}</span>
 
                 {/* Transaction count */}
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div className="mobile-list-count" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
                   <span style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.7)", fontFamily: body }}>{w.transactions ?? 0} 条</span>
                 </div>
 
-                <WatchlistToggle entry={{ catalogId: w.catalogId, ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.thumbUrl }} variant="icon" />
+                <div className="mobile-list-action">
+                  <WatchlistToggle entry={{ catalogId: w.catalogId, ref: w.ref, brand: w.brand, name: w.name, thumbUrl: w.thumbUrl }} variant="icon" />
+                </div>
 
 
                 {/* Arrow */}
-                <div style={{ display: "flex", justifyContent: "center" }}>
+                <div className="mobile-list-arrow" style={{ display: "flex", justifyContent: "center" }}>
                   <ChevronRight size={15} color="rgba(255,255,255,0.2)" />
                 </div>
               </div>
@@ -614,7 +616,7 @@ export default function SearchResults() {
 
         {/* ─── PAGINATION ─── */}
         {totalPages > 1 && (
-          <div style={{
+          <div className="mobile-pagination" style={{
             display: "flex", alignItems: "center", justifyContent: "center",
             gap: "4px", marginTop: "32px",
           }}>
@@ -699,7 +701,7 @@ export default function SearchResults() {
             <span style={{ fontFamily: heading, fontStyle: "italic", fontSize: "16px", color: "rgba(255,255,255,0.5)" }}>Raventik</span>
             <span style={{ fontSize: "11px", fontWeight: 300, color: "rgba(255,255,255,0.25)", fontFamily: body }}>© 2026 谕鸦科技 Ravacle Inc.</span>
           </div>
-          <div style={{ display: "flex", gap: "20px" }}>
+          <div className="mobile-footer-links" style={{ display: "flex", gap: "20px" }}>
             {["隐私政策", "服务条款", "联系我们"].map((link, i) => (
               <a key={i} href="#" style={{ fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.3)", textDecoration: "none", transition: "color 0.2s", fontFamily: body }}
               onMouseEnter={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.7)" }}

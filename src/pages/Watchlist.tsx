@@ -145,7 +145,7 @@ export default function Watchlist() {
       <main style={{maxWidth:"1280px",margin:"0 auto",padding:"88px 40px 60px",position:"relative",zIndex:1}}>
 
         {/* ── Header ── */}
-        <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:"32px",paddingTop:"12px"}}>
+        <div className="mobile-page-heading mobile-stack" style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:"32px",paddingTop:"12px"}}>
           <div>
             <div className="gp" style={{display:"inline-flex",padding:"4px 14px",fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.6)",marginBottom:"14px",letterSpacing:"1px",fontFamily:bd}}>关注列表</div>
             <h1 style={{fontFamily:"'Noto Serif SC',serif",fontSize:"32px",color:"#fff",letterSpacing:"-1px",lineHeight:1.1,fontWeight:700}}>我的关注</h1>
@@ -168,7 +168,7 @@ export default function Watchlist() {
         </div>
 
         {/* ── Toolbar ── */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
+        <div className="mobile-toolbar" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
           <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>
             {brandFilter==="全部" ? `共 ${filtered.length} 个关注表款` : `${brandFilter} · ${filtered.length} 个表款`}
           </p>
@@ -217,16 +217,16 @@ export default function Watchlist() {
 
         {/* ═══ CARD VIEW ═══ */}
         {watches.length > 0 && viewMode === "card" && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"}}>
+          <div className="mobile-card-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"}}>
             {pageData.map(w => (
               <div key={getWatchIdentity(w.ref, w.catalogId)}
                    onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
-                   className={`gc watch-card ${removingIdentity===getWatchIdentity(w.ref, w.catalogId)?"removing":""}`}
+                   className={`gc watch-card mobile-card ${removingIdentity===getWatchIdentity(w.ref, w.catalogId)?"removing":""}`}
                    style={{padding:0,display:"flex",flexDirection:"column"}}>
-                <div style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
+                <div className="mobile-card-image" style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
                   {w.thumbUrl ? <img src={w.thumbUrl} alt={w.name||w.ref} style={{width:160,height:160,objectFit:"contain"}}/> : <WatchPlaceholder size={160}/>}
                 </div>
-                <div style={{padding:"16px 18px 18px",flex:1,display:"flex",flexDirection:"column"}}>
+                <div className="mobile-card-body" style={{padding:"16px 18px 18px",flex:1,display:"flex",flexDirection:"column"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
                       <span style={{fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.4)",fontFamily:bd,textTransform:"uppercase",letterSpacing:"0.8px"}}>{w.brand || "—"}</span>
@@ -263,9 +263,9 @@ export default function Watchlist() {
 
         {/* ═══ LIST VIEW ═══ */}
         {watches.length > 0 && viewMode === "list" && (
-          <div className="gc" style={{padding:0,overflow:"hidden"}}>
+          <div className="gc mobile-list-shell" style={{padding:0,overflow:"hidden"}}>
             {/* Header */}
-            <div style={{display:"grid",gridTemplateColumns:"48px 1fr 130px 130px 90px 36px 32px",padding:"12px 20px",gap:"12px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
+            <div className="mobile-list-header" style={{display:"grid",gridTemplateColumns:"48px 1fr 130px 130px 90px 36px 32px",padding:"12px 20px",gap:"12px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
               {["","Ref / 型号","价格","加入时间","状态","",""].map((h,i)=>(
                 <span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>
               ))}
@@ -274,31 +274,33 @@ export default function Watchlist() {
             {pageData.map((w,i)=>(
               <div key={getWatchIdentity(w.ref, w.catalogId)}
                    onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
-                   className={`watch-row ${removingIdentity===getWatchIdentity(w.ref, w.catalogId)?"removing":""}`}
+                   className={`watch-row mobile-list-row ${removingIdentity===getWatchIdentity(w.ref, w.catalogId)?"removing":""}`}
                    style={{
                      display:"grid",gridTemplateColumns:"48px 1fr 130px 130px 90px 36px 32px",
                      padding:"10px 20px",gap:"12px",
                      borderBottom:i<pageData.length-1?"1px solid rgba(255,255,255,0.04)":"none",
                      alignItems:"center",transition:"all 0.3s ease",
                    }}>
-                <div style={{width:"42px",height:"42px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+                <div className="mobile-list-thumb" style={{width:"42px",height:"42px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
                   {w.thumbUrl ? <img src={w.thumbUrl} alt="" style={{width:36,height:36,objectFit:"contain"}}/> : <WatchPlaceholder size={36}/>}
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:"8px",overflow:"hidden",minWidth:0}}>
+                <div className="mobile-list-main" style={{display:"flex",alignItems:"center",gap:"8px",overflow:"hidden",minWidth:0}}>
                   <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd,letterSpacing:"0.3px",whiteSpace:"nowrap",flexShrink:0}}>{w.ref}</span>
                   <span style={{fontSize:"11px",color:"rgba(255,255,255,0.15)",flexShrink:0}}>|</span>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>{[w.brand, w.name].filter(Boolean).join(" ") || "—"}</span>
                 </div>
-                <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd,whiteSpace:"nowrap"}}>{w.price || "—"}</span>
-                <span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap"}}>加入于 {new Date(w.addedAt).toLocaleDateString("zh-CN")}</span>
-                <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                <span className="mobile-list-secondary" style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd,whiteSpace:"nowrap"}}>{w.price || "—"}</span>
+                <span className="mobile-list-secondary" style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap"}}>加入于 {new Date(w.addedAt).toLocaleDateString("zh-CN")}</span>
+                <div className="mobile-list-count" style={{display:"flex",alignItems:"center",gap:"6px"}}>
                   <div style={{width:"5px",height:"5px",borderRadius:"50%",background:"#22c55e",flexShrink:0,boxShadow:"0 0 6px rgba(34,197,94,0.4)"}}/>
                   <span style={{fontSize:"11px",fontWeight:500,color:"rgba(34,197,94,0.7)",fontFamily:bd}}>监控中</span>
                 </div>
-                <button className="bk-btn" onClick={(e)=>{e.stopPropagation();unfollow(w)}} title="取消关注">
-                  <Bookmark size={15} color="#f59e0b" fill="#f59e0b" strokeWidth={1.5}/>
-                </button>
-                <div style={{display:"flex",justifyContent:"center"}}><ChevronRight size={15} color="rgba(255,255,255,0.2)"/></div>
+                <div className="mobile-list-action">
+                  <button className="bk-btn" onClick={(e)=>{e.stopPropagation();unfollow(w)}} title="取消关注">
+                    <Bookmark size={15} color="#f59e0b" fill="#f59e0b" strokeWidth={1.5}/>
+                  </button>
+                </div>
+                <div className="mobile-list-arrow" style={{display:"flex",justifyContent:"center"}}><ChevronRight size={15} color="rgba(255,255,255,0.2)"/></div>
               </div>
             ))}
           </div>
@@ -306,7 +308,7 @@ export default function Watchlist() {
 
         {/* ── Pagination ── */}
         {watches.length > 0 && totalPages > 1 && (
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",marginTop:"32px"}}>
+          <div className="mobile-pagination" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",marginTop:"32px"}}>
             <button className="pg-btn" onClick={()=>goPage(page-1)} disabled={page===1} style={{background:"rgba(255,255,255,0.04)",color:page===1?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronLeft size={16}/></button>
             {buildPageList(page, totalPages).map((p,i)=>(
               p === "..."
@@ -325,7 +327,7 @@ export default function Watchlist() {
             <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"16px",color:"rgba(255,255,255,0.5)"}}>Raventik</span>
             <span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.25)",fontFamily:bd}}>© 2026 谕鸦科技 Ravacle Inc.</span>
           </div>
-          <div style={{display:"flex",gap:"20px"}}>
+          <div className="mobile-footer-links" style={{display:"flex",gap:"20px"}}>
             {["隐私政策","服务条款","联系我们"].map((l,i)=>(
               <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}}
                 onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}}

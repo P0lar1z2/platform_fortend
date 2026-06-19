@@ -402,6 +402,44 @@ export default function WatchDetail() {
         .bl{display:inline-flex;align-items:center;gap:4px;text-decoration:none;transition:all 0.2s ease;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,0.04)}.bl:hover{background:rgba(255,255,255,0.1);transform:translateX(2px)}
         .sl{cursor:pointer;transition:color 0.2s ease;text-decoration:none}.sl:hover{color:#fff !important;text-decoration:underline;text-underline-offset:3px}
         .cb{transition:all 0.3s cubic-bezier(0.16,1,0.3,1)}.cb:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(255,255,255,0.1)}
+        @media(max-width:620px){
+          .watch-identity-card{grid-template-columns:1fr!important;border-radius:16px!important}
+          .watch-image-pane{border-right:none!important;border-bottom:1px solid rgba(255,255,255,0.06);padding:14px!important}
+          .watch-image-pane>div:first-child{height:280px;max-height:280px!important}
+          .watch-info-pane{padding:22px 18px!important}
+          .watch-info-pane h1{font-size:30px!important;letter-spacing:0!important}
+          .watch-actions{align-items:stretch!important;flex-direction:column!important}
+          .watch-actions>*,.watch-actions button{width:100%}
+          .watch-market-header{align-items:flex-start!important;flex-direction:column!important;gap:16px}
+          .watch-time-window{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+          .watch-time-window button{min-width:48px;min-height:40px}
+          .watch-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px 12px!important}
+          .watch-overview-grid>div:nth-child(2n){padding-left:12px;border-left:1px solid rgba(255,255,255,0.06)}
+          .watch-overview-grid a,.watch-overview-grid>div>div:nth-child(2){font-size:18px!important;overflow-wrap:anywhere}
+          .watch-source-grid{grid-template-columns:1fr!important}
+          .watch-chart-toolbar{align-items:flex-start!important;flex-wrap:wrap!important;padding:14px!important;gap:12px}
+          .watch-chart-toolbar>div:first-child{width:100%;flex-wrap:wrap}
+          .watch-chart-body{padding:14px 8px 18px!important;overflow:hidden}
+          .watch-chart-body svg{min-width:0}
+          .watch-tx-header{display:none!important}
+          .watch-tx-row{
+            grid-template-columns:44px minmax(0,1fr) auto!important;
+            grid-template-rows:auto auto!important;
+            gap:5px 10px!important;
+            padding:12px 14px!important;
+          }
+          .watch-tx-row>:first-child{grid-column:1;grid-row:1 / span 2}
+          .watch-tx-row>:nth-child(2){grid-column:2;grid-row:1}
+          .watch-tx-row>:nth-child(3){grid-column:2;grid-row:2}
+          .watch-tx-row>:nth-child(4){grid-column:3;grid-row:1;font-size:14px!important}
+          .watch-tx-row>:nth-child(n+5):nth-child(-n+9){display:none!important}
+          .watch-tx-row>:nth-child(10){grid-column:3;grid-row:2}
+          .valuation-conditions-grid,.valuation-summary-grid{grid-template-columns:1fr!important}
+          .watch-wide-table{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+          .watch-wide-table>div{min-width:760px}
+          .watch-bottom-callout{align-items:flex-start!important;flex-direction:column!important}
+          .watch-bottom-callout>button{width:100%}
+        }
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
 
@@ -418,10 +456,10 @@ export default function WatchDetail() {
             API: GET /api/watches/:ref → watchbase data */}
         <section style={{marginBottom:"60px",paddingTop:"12px"}}>
           {/* Unified glass card — image left, info right, same height */}
-          <div className="gc" style={{display:"grid",gridTemplateColumns:"420px 1fr",borderRadius:"24px",overflow:"hidden"}}>
+          <div className="gc watch-identity-card" style={{display:"grid",gridTemplateColumns:"420px 1fr",borderRadius:"24px",overflow:"hidden"}}>
             {/* Left — Image area (compact layout) */}
             {/* API: WATCH.images[] — first = main, rest = gallery */}
-            <div style={{background:"rgba(255,255,255,0.02)",borderRight:"1px solid rgba(255,255,255,0.04)",display:"flex",flexDirection:"column",padding:"20px"}}>
+            <div className="watch-image-pane" style={{background:"rgba(255,255,255,0.02)",borderRight:"1px solid rgba(255,255,255,0.04)",display:"flex",flexDirection:"column",padding:"20px"}}>
               {/* Main image — constrained height */}
               <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",maxHeight:"360px",marginBottom:"12px"}}>
                 {watch && watch.images && watch.images.length > 0 ? (
@@ -447,7 +485,7 @@ export default function WatchDetail() {
             </div>
 
             {/* Right — Identity info + specs */}
-            <div style={{padding:"32px 36px",display:"flex",flexDirection:"column"}}>
+            <div className="watch-info-pane" style={{padding:"32px 36px",display:"flex",flexDirection:"column"}}>
               {/* PDF 4.1 表款信息区 —— 全部由 GET /api/watches/:ref 驱动 */}
               <h1 style={{fontFamily:hd,fontStyle:"italic",fontSize:"40px",color:"#fff",letterSpacing:"-1.5px",lineHeight:1,marginBottom:"10px"}}>Ref. {watch?.ref ?? ref}</h1>
 
@@ -479,7 +517,7 @@ export default function WatchDetail() {
           </div>
 
           {/* PDF 4.1 按钮 - 设置关注 + 设置交易预期 */}
-          <div style={{display:"flex",gap:"10px",justifyContent:"center",marginTop:"20px"}}>
+          <div className="watch-actions" style={{display:"flex",gap:"10px",justifyContent:"center",marginTop:"20px"}}>
             <WatchlistToggle
               entry={{ catalogId: watch?.catalogId ?? catalogId, ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }}
               variant="wide"
@@ -502,20 +540,20 @@ export default function WatchDetail() {
               GET /api/watches/:ref/transactions?period={tw}&page=&limit= */}
         <section style={{marginBottom:"60px"}}>
           {/* Header + Global Time Window */}
-          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:"24px"}}>
+          <div className="watch-market-header" style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:"24px"}}>
             <div>
               <div className="gp" style={{display:"inline-flex",padding:"4px 14px",fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.6)",marginBottom:"14px",letterSpacing:"1px",fontFamily:bd}}>市场数据</div>
               <h2 style={{fontFamily:"'Noto Serif SC',serif",fontSize:"32px",color:"#fff",letterSpacing:"-1px",lineHeight:1.1,fontWeight:700}}>价格走势与交易记录</h2>
             </div>
             {/* Time window — controls ALL Section B data */}
-            <div style={{display:"flex",gap:"2px",background:"rgba(255,255,255,0.04)",borderRadius:"12px",padding:"3px"}}>
+            <div className="watch-time-window" style={{display:"flex",gap:"2px",background:"rgba(255,255,255,0.04)",borderRadius:"12px",padding:"3px"}}>
               {TIME_WINDOWS.map(t=>(<button key={t} className="tw" onClick={()=>{setTw(t);setTxPg(1)}} style={{background:tw===t?"rgba(255,255,255,0.12)":"transparent",color:tw===t?"#fff":"rgba(255,255,255,0.4)",fontFamily:bd}}>{t}</button>))}
             </div>
           </div>
 
           {/* B-Top: Overview Stats — API: aggregated from all sources */}
           <div className="gc" style={{padding:"24px 28px",borderRadius:"18px",marginBottom:"16px"}}>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"20px"}}>
+            <div className="watch-overview-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"20px"}}>
               <div>
                 <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px",fontFamily:bd}}>近期均价</div>
                 <div style={{fontSize:"24px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{(oStats.avg ?? 0).toLocaleString()}</div>
@@ -543,7 +581,7 @@ export default function WatchDetail() {
           {/* B-Mid: Per-Source Breakdown
               API: computed per source key. Auto-expands when DATA_SOURCES grows.
               LOGO_PLACEHOLDER: replace SrcLogo inner <span> with <img src={source.logoUrl} width={source.logoWidth} height={source.logoHeight} /> */}
-          <div style={{display:"grid",gridTemplateColumns:`repeat(${DATA_SOURCES.length},1fr)`,gap:"12px",marginBottom:"24px"}}>
+          <div className="watch-source-grid" style={{display:"grid",gridTemplateColumns:`repeat(${DATA_SOURCES.length},1fr)`,gap:"12px",marginBottom:"24px"}}>
             {srcStats.map(src=>(
               <div key={src.key} className="gc" style={{padding:"20px",borderRadius:"16px"}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px"}}>
@@ -570,7 +608,7 @@ export default function WatchDetail() {
           {/* B-Bottom: Chart / List Toggle */}
           <div className="gc" style={{padding:0,borderRadius:"20px",overflow:"hidden"}}>
             {/* Toolbar */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+            <div className="watch-chart-toolbar" style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
               <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
                 {vm==="chart"?(<>
                   <span style={{fontSize:"11px",color:"rgba(255,255,255,0.3)",fontFamily:bd,marginRight:"4px"}}>数据源：</span>
@@ -586,12 +624,12 @@ export default function WatchDetail() {
             </div>
 
             {/* Chart view */}
-            {vm==="chart"&&<div style={{padding:"20px 24px 24px"}}><PriceChart data={pData} visible={visSrc} hasOlderData={tw !== "All" && (oStats.count ?? 0) > 0 && pData.length === 0} currentPeriod={tw} onExpandPeriod={() => { setTw("All"); setTxPg(1); }}/></div>}
+            {vm==="chart"&&<div className="watch-chart-body" style={{padding:"20px 24px 24px"}}><PriceChart data={pData} visible={visSrc} hasOlderData={tw !== "All" && (oStats.count ?? 0) > 0 && pData.length === 0} currentPeriod={tw} onExpandPeriod={() => { setTw("All"); setTxPg(1); }}/></div>}
 
             {/* List view — matches screenshot: 图/来源/日期/成交价/成色/配件/材质/表盘色/Ref/链接 */}
             {/* API: GET /api/watches/:ref/transactions?period={tw}&page=&page_size= */}
             {vm==="list"&&(<>
-              <div style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"10px 24px",gap:"8px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
+              <div className="watch-tx-header" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"10px 24px",gap:"8px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
                 <span />
                 <span style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>来源</span>
                 <SortHeader active={txSort?.field === "date"} dir={txSort?.field === "date" ? txSort.dir : "desc"} label="拍卖日期" onClick={() => toggleTxSort("date")} />
@@ -613,7 +651,7 @@ export default function WatchDetail() {
                 </div>
               )}
               {sortedTxPD.map((tx,i)=>(
-                <div key={tx.id} className="tr" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
+                <div key={tx.id} className="tr watch-tx-row" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail — tx.thumbUrl (mongo product_image_url) */}
                   <div style={{width:"32px",height:"32px",borderRadius:"6px",overflow:"hidden",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                     {tx.thumbUrl
@@ -756,7 +794,7 @@ export default function WatchDetail() {
                 <ChevronRight size={13} style={{transform:showMoreConds?"rotate(90deg)":"none",transition:"transform 0.2s"}}/> 更多条件（成色、附件、保修等）
               </button>
               {showMoreConds&&(
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",marginTop:"12px",padding:"16px 20px",borderRadius:"14px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.04)"}}>
+                <div className="valuation-conditions-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",marginTop:"12px",padding:"16px 20px",borderRadius:"14px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.04)"}}>
                   <div>
                     <span style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:bd,display:"block",marginBottom:"8px"}}>成色 (Rank)</span>
                     <select value={condition} onChange={e=>setCondition(e.target.value)} style={{
@@ -868,7 +906,7 @@ export default function WatchDetail() {
                   <span style={{fontSize:"13px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>{bestPlatformName}</span>
                   <span style={{display:"inline-flex",alignItems:"center",gap:"3px",padding:"3px 12px",borderRadius:"8px",fontSize:"12px",fontWeight:600,background:bestDec.bg,color:bestDec.color,fontFamily:bd}}>{bestDec.label}</span>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px"}}>
+                <div className="valuation-summary-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"14px"}}>
                   <div style={{padding:"18px 20px",borderRadius:"14px",background:"rgba(255,255,255,0.03)",border:`1px solid ${bestDec.color}15`}}>
                     <div style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"6px",fontFamily:bd}}>利润率</div>
                     <div style={{fontSize:"34px",fontWeight:700,color:bestDec.color,fontFamily:bd,letterSpacing:"-1px",lineHeight:1}}>{(v.bestCombo.margin ?? 0)>0?"+":""}{(v.bestCombo.margin ?? 0).toFixed(1)}%</div>
@@ -889,7 +927,7 @@ export default function WatchDetail() {
               </div>
 
               {/* ── 明细表 收起态/展开态 ── */}
-              <div className="gc" style={{padding:0,borderRadius:"18px",overflow:"hidden"}}>
+              <div className="gc watch-wide-table" style={{padding:0,borderRadius:"18px",overflow:"hidden"}}>
                 <div style={{display:"grid",gridTemplateColumns:"140px 110px 120px 120px 120px 1fr",padding:"12px 24px",gap:"12px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
                   {["交易路径","决策","预期买入价","总成本","平均净回款","平均利润率"].map((h,i)=>(
                     <span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>
@@ -964,7 +1002,7 @@ export default function WatchDetail() {
 
           {/* PDF 4.4.4 可询价货源 —— 系统按预计买入价 × (1-下浮 ~ 1+上浮) 在挂牌价平台筛选 */}
           {showResults && valuationResult && valuationResult.sourcing && valuationResult.sourcing.length > 0 && (
-            <div className="gc" style={{padding:0,borderRadius:"18px",overflow:"hidden",marginTop:"16px"}}>
+            <div className="gc watch-wide-table" style={{padding:0,borderRadius:"18px",overflow:"hidden",marginTop:"16px"}}>
               <div style={{padding:"16px 24px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div>
                   <div style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd}}>可询价货源</div>
@@ -1003,7 +1041,7 @@ export default function WatchDetail() {
           )}
 
           {/* PDF v1.1 Section C 底部引导文案 + 共享关注按钮 */}
-          <div style={{marginTop:"16px",padding:"16px 20px",borderRadius:"14px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"16px"}}>
+          <div className="watch-bottom-callout" style={{marginTop:"16px",padding:"16px 20px",borderRadius:"14px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"16px"}}>
             <div style={{display:"flex",alignItems:"center",gap:"10px",flex:1}}>
               <Bell size={14} color="rgba(255,255,255,0.3)" style={{flexShrink:0}}/>
               <span style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.35)",fontFamily:bd}}>加入关注列表后，系统将每日监控各平台货源并通过飞书推送</span>
@@ -1017,7 +1055,7 @@ export default function WatchDetail() {
       <footer style={{padding:"32px 40px 24px",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
         <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:"16px"}}><span style={{fontFamily:hd,fontStyle:"italic",fontSize:"16px",color:"rgba(255,255,255,0.5)"}}>Raventik</span><span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.25)",fontFamily:bd}}>© 2026 谕鸦科技 Ravacle Inc.</span></div>
-          <div style={{display:"flex",gap:"20px"}}>{["隐私政策","服务条款","联系我们"].map((l,i)=>(<a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}} onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}} onMouseLeave={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.3)"}}>{l}</a>))}</div>
+          <div className="mobile-footer-links" style={{display:"flex",gap:"20px"}}>{["隐私政策","服务条款","联系我们"].map((l,i)=>(<a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}} onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}} onMouseLeave={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.3)"}}>{l}</a>))}</div>
         </div>
       </footer>
     </div>
