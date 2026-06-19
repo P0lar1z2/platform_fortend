@@ -16,6 +16,7 @@ import AppHeader from "../components/AppHeader";
 const hd = "'Instrument Serif','Noto Serif SC',serif";
 const bd = "'Barlow','Noto Sans SC',sans-serif";
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const MOBILE_FRIENDLY_BATCH_SIZE = 60;
 
 type BrandFilterLetter = "ALL" | string;
 
@@ -110,12 +111,22 @@ export default function BrandList() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [activeLetter, setActiveLetter] = useState<BrandFilterLetter>("ALL");
+  const [visibleCount, setVisibleCount] = useState(MOBILE_FRIENDLY_BATCH_SIZE);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
 
   useEffect(() => {
     listBrands()
       .then(r => setBrands(r.items ?? []))
       .catch(() => setErr("品牌列表加载失败"))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 620px)");
+    const syncViewport = () => setIsCompactViewport(query.matches);
+    syncViewport();
+    query.addEventListener("change", syncViewport);
+    return () => query.removeEventListener("change", syncViewport);
   }, []);
 
   const dedupedBrands = useMemo(() => mergeBrands(brands), [brands]);
@@ -134,6 +145,13 @@ export default function BrandList() {
   const filteredBrands = activeLetter === "ALL"
     ? dedupedBrands
     : dedupedBrands.filter(brand => brandInitial(brand) === activeLetter);
+  const visibleBrands = isCompactViewport
+    ? filteredBrands.slice(0, visibleCount)
+    : filteredBrands;
+
+  useEffect(() => {
+    setVisibleCount(MOBILE_FRIENDLY_BATCH_SIZE);
+  }, [activeLetter]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#fff", fontFamily: bd }}>
@@ -156,6 +174,17 @@ export default function BrandList() {
         .gp::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(180deg,rgba(255,255,255,0.35) 0%,rgba(255,255,255,0.1) 30%,rgba(255,255,255,0) 50%,rgba(255,255,255,0.1) 70%,rgba(255,255,255,0.35) 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
         .explore-link{display:flex;align-items:center;gap:4px;font-size:12px;color:rgba(255,255,255,0.3);transition:all 0.3s ease}
         .brand-card:hover .explore-link{color:rgba(255,255,255,0.7);transform:translateX(3px)}
+        @media(max-width:620px){
+          .brand-filter-bar{gap:6px!important;padding:8px!important;border-radius:12px!important}
+          .brand-filter-bar button{height:40px!important;min-width:40px!important}
+          .brand-grid{grid-template-columns:1fr!important;gap:12px!important}
+          .brand-card-wrapper{perspective:none}
+          .brand-card,.brand-card:hover{transform:none!important}
+          .card-depth-bottom,.card-depth-right,.card-shadow{display:none}
+          .card-front{height:auto!important;min-height:150px;padding:22px 20px!important;border-radius:14px}
+          .brand-card:hover .explore-link{transform:none}
+          .brand-load-more{width:100%;min-height:44px}
+        }
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
 
@@ -182,7 +211,7 @@ export default function BrandList() {
           </div>
 
           {!loading && !err && dedupedBrands.length > 0 && (
-            <div style={{
+            <div className="brand-filter-bar" style={{
               marginTop:"22px",
               display:"flex",
               alignItems:"center",
@@ -241,8 +270,8 @@ export default function BrandList() {
         </div>
 
         {!loading && !err && filteredBrands.length > 0 && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"28px 24px"}}>
-            {filteredBrands.map((brand) => {
+          <div className="brand-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"28px 24px"}}>
+            {visibleBrands.map((brand) => {
               const nameLen = brand.name.length;
               const nameSize = nameLen > 16 ? "20px" : nameLen > 10 ? "24px" : "28px";
               return (
@@ -277,6 +306,22 @@ export default function BrandList() {
           </div>
         )}
 
+        {!loading && !err && isCompactViewport && visibleBrands.length < filteredBrands.length && (
+          <div style={{display:"flex",justifyContent:"center",marginTop:"28px"}}>
+            <button
+              type="button"
+              className="gp brand-load-more"
+              onClick={() => setVisibleCount(count => count + MOBILE_FRIENDLY_BATCH_SIZE)}
+              style={{
+                border:"none",padding:"11px 22px",cursor:"pointer",
+                color:"#fff",fontSize:"13px",fontWeight:500,fontFamily:bd,
+              }}
+            >
+              加载更多（{filteredBrands.length - visibleBrands.length}）
+            </button>
+          </div>
+        )}
+
         {!loading && !err && dedupedBrands.length > 0 && filteredBrands.length === 0 && (
           <div style={{padding:"60px 20px",textAlign:"center",color:"rgba(255,255,255,0.4)",fontFamily:bd,fontSize:"13px"}}>
             没有以 "{activeLetter}" 开头的品牌
@@ -291,7 +336,7 @@ export default function BrandList() {
             <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"16px",color:"rgba(255,255,255,0.5)"}}>Raventik</span>
             <span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.25)",fontFamily:bd}}>© 2026 谕鸦科技 Ravacle Inc.</span>
           </div>
-          <div style={{display:"flex",gap:"20px"}}>
+          <div className="mobile-footer-links" style={{display:"flex",gap:"20px"}}>
             {["隐私政策","服务条款","联系我们"].map((link,i) => (
               <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",fontFamily:bd}}>{link}</a>
             ))}

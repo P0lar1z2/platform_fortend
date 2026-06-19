@@ -183,7 +183,7 @@ export default function BrandModels() {
 
         {/* ── Brand Header ── */}
         {/* API: GET /api/brands/:slug */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"32px",paddingTop:"12px"}}>
+        <div className="mobile-page-heading mobile-stack" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"32px",paddingTop:"12px"}}>
           <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
             {/* BRAND_LOGO_PLACEHOLDER: Replace with <img src={brand.logoUrl} height={36} /> */}
             <div style={{width:"48px",height:"48px",borderRadius:"12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -208,7 +208,7 @@ export default function BrandModels() {
         </div>
 
         {/* ── Toolbar ── */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
+        <div className="mobile-toolbar" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
           <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{loading ? "加载中..." : `共 ${total} 个型号`}</p>
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
             <button className="mode-btn" onClick={()=>setShowFilters(!showFilters)} style={{background:showFilters?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)"}}>
@@ -241,16 +241,16 @@ export default function BrandModels() {
         {/* Shared card component — reuse for watchlist page
             Key difference from search results: bookmark icon on Ref line */}
         {viewMode === "card" && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"}}>
+          <div className="mobile-card-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"}}>
             {pageData.map(w => {
               return (
-                <div key={w.catalogId ?? w.ref} className="gc watch-card"
+                <div key={w.catalogId ?? w.ref} className="gc watch-card mobile-card"
                      onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
                      style={{padding:0,display:"flex",flexDirection:"column"}}>
-                  <div style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
+                  <div className="mobile-card-image" style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
                     <WatchImage src={w.thumbUrl} alt={w.name} size={160}/>
                   </div>
-                  <div style={{padding:"16px 18px 18px",flex:1,display:"flex",flexDirection:"column"}}>
+                  <div className="mobile-card-body" style={{padding:"16px 18px 18px",flex:1,display:"flex",flexDirection:"column"}}>
                     <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"6px"}}>
                       <span style={{fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.4)",fontFamily:bd,textTransform:"uppercase",letterSpacing:"0.8px"}}>{w.brand}</span>
                       <span style={{fontSize:"11px",color:"rgba(255,255,255,0.2)"}}>·</span>
@@ -284,9 +284,9 @@ export default function BrandModels() {
 
         {/* ═══ LIST VIEW ═══ */}
         {viewMode === "list" && (
-          <div className="gc" style={{padding:0,overflow:"hidden"}}>
+          <div className="gc mobile-list-shell" style={{padding:0,overflow:"hidden"}}>
             {/* Header */}
-            <div style={{display:"grid",gridTemplateColumns:"48px 1fr 100px 90px 150px 90px 36px 36px",padding:"12px 20px",gap:"12px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
+            <div className="mobile-list-header" style={{display:"grid",gridTemplateColumns:"48px 1fr 100px 90px 150px 90px 36px 36px",padding:"12px 20px",gap:"12px",borderBottom:"1px solid rgba(255,255,255,0.06)",alignItems:"center"}}>
               {["","Ref / 型号","系列","表盘颜色","材质","交易数","",""].map((h,i)=>(
                 <span key={i} style={{fontSize:"10px",fontWeight:500,color:"rgba(255,255,255,0.3)",letterSpacing:"0.8px",fontFamily:bd,whiteSpace:"nowrap"}}>{h}</span>
               ))}
@@ -294,28 +294,30 @@ export default function BrandModels() {
             {/* Rows */}
             {pageData.map((w,i) => {
               return (
-                <div key={w.catalogId ?? w.ref} className="watch-row"
+                <div key={w.catalogId ?? w.ref} className="watch-row mobile-list-row"
                      onClick={() => navigate(getWatchHref(w.ref, w.catalogId))}
                      style={{display:"grid",gridTemplateColumns:"48px 1fr 100px 90px 150px 90px 36px 36px",padding:"10px 20px",gap:"12px",borderBottom:i<pageData.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail */}
-                  <div style={{width:"42px",height:"42px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+                  <div className="mobile-list-thumb" style={{width:"42px",height:"42px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
                     <WatchImage src={w.thumbUrl} alt={w.name} size={36}/>
                   </div>
                   {/* Ref + Name */}
-                  <div style={{display:"flex",alignItems:"center",gap:"8px",overflow:"hidden",minWidth:0}}>
+                  <div className="mobile-list-main" style={{display:"flex",alignItems:"center",gap:"8px",overflow:"hidden",minWidth:0}}>
                     <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd,letterSpacing:"0.3px",whiteSpace:"nowrap",flexShrink:0}}>{w.ref}</span>
                     <span style={{fontSize:"11px",color:"rgba(255,255,255,0.15)",flexShrink:0}}>|</span>
                     <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>{w.name}</span>
                   </div>
-                  <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.45)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{w.family}</span>
-                  <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{w.dialColor ?? "—"}</span>
-                  <span style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{w.material ?? "—"}</span>
-                  <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                  <span className="mobile-list-secondary" style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.45)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{w.family}</span>
+                  <span className="mobile-list-secondary" style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{w.dialColor ?? "—"}</span>
+                  <span className="mobile-list-secondary" style={{fontSize:"12px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{w.material ?? "—"}</span>
+                  <div className="mobile-list-count" style={{display:"flex",alignItems:"center",gap:"6px"}}>
                     <div style={{width:"5px",height:"5px",borderRadius:"50%",background:"#22c55e",flexShrink:0}}/>
                     <span style={{fontSize:"13px",fontWeight:500,color:"rgba(255,255,255,0.7)",fontFamily:bd}}>{w.transactions ?? 0} 条</span>
                   </div>
-                  <WatchlistToggle entry={{ catalogId: w.catalogId, ref: w.ref, brand: w.brand, name: w.name }} variant="icon" />
-                  <div style={{display:"flex",justifyContent:"center"}}><ChevronRight size={15} color="rgba(255,255,255,0.2)"/></div>
+                  <div className="mobile-list-action">
+                    <WatchlistToggle entry={{ catalogId: w.catalogId, ref: w.ref, brand: w.brand, name: w.name }} variant="icon" />
+                  </div>
+                  <div className="mobile-list-arrow" style={{display:"flex",justifyContent:"center"}}><ChevronRight size={15} color="rgba(255,255,255,0.2)"/></div>
                 </div>
               );
             })}
@@ -324,7 +326,7 @@ export default function BrandModels() {
 
         {/* ── Pagination ── */}
         {totalPages > 1 && (
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",marginTop:"32px"}}>
+          <div className="mobile-pagination" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",marginTop:"32px"}}>
             <button className="pg-btn" onClick={()=>goPage(page-1)} disabled={page===1} style={{background:"rgba(255,255,255,0.04)",color:page===1?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.6)"}}><ChevronLeft size={16}/></button>
             {buildPageList(page, totalPages).map((p,i)=>(
               p === "..."
@@ -366,7 +368,7 @@ export default function BrandModels() {
             <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"16px",color:"rgba(255,255,255,0.5)"}}>Raventik</span>
             <span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.25)",fontFamily:bd}}>© 2026 谕鸦科技 Ravacle Inc.</span>
           </div>
-          <div style={{display:"flex",gap:"20px"}}>
+          <div className="mobile-footer-links" style={{display:"flex",gap:"20px"}}>
             {["隐私政策","服务条款","联系我们"].map((l,i)=>(
               <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}}
                 onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}}

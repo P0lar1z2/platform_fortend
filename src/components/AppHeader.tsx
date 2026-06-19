@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import { useWatchlist } from "../hooks/useWatchlist";
 import UserMenu from "./UserMenu";
 
@@ -34,11 +34,21 @@ export default function AppHeader({
   const navigate = useNavigate();
   const [hover, setHover] = useState(false);
   const [query, setQuery] = useState(searchValue);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { count, capacity, isNearLimit, isFull } = useWatchlist();
 
   useEffect(() => {
     setQuery(searchValue);
   }, [searchValue]);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    document.body.classList.toggle("has-header-search", showSearch);
+    return () => document.body.classList.remove("has-header-search");
+  }, [showSearch]);
 
   const isActive = (to: string) => to === "/" ? pathname === "/" : pathname.startsWith(to);
   const submitSearch = (nextQuery: string) => {
@@ -51,7 +61,7 @@ export default function AppHeader({
   };
 
   return (
-    <header className="app-header">
+    <header className={`app-header${showSearch ? " has-search" : ""}`}>
       <style>{`
         .app-header{position:fixed;top:0;left:0;right:0;z-index:50;padding:12px 40px;background:rgba(10,10,10,.68);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,.06);box-shadow:inset 0 -1px 0 rgba(255,255,255,.035);font-family:${bd}}
         .app-header-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:20px}
@@ -64,13 +74,30 @@ export default function AppHeader({
         .app-header-clear{display:flex;align-items:center;border:0;background:transparent;padding:4px;cursor:pointer;color:rgba(255,255,255,.4)}
         .app-header-submit{display:flex;align-items:center;gap:4px;padding:7px 16px;border:0;border-radius:9999px;background:rgba(255,255,255,.07);color:#fff;font-size:12px;font-weight:500;font-family:${bd};cursor:pointer;box-shadow:inset 0 1px 1px rgba(255,255,255,.18)}
         .app-header-nav{margin-left:auto;display:flex;align-items:center;gap:4px;flex-shrink:0}
+        .app-header-menu-toggle{display:none;width:40px;height:40px;align-items:center;justify-content:center;border:0;border-radius:10px;background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
+        .app-header-mobile-menu{display:none}
         .app-header-link{position:relative;padding:6px 12px;border-radius:9999px;color:rgba(255,255,255,.6);text-decoration:none;font-size:12px;font-weight:400;white-space:nowrap}
         .app-header-link.active{background:rgba(255,255,255,.08);color:#fff}
         .app-header-link:hover{color:#fff;background:rgba(255,255,255,.065)}
         .app-header-badge{margin-left:6px;padding:1px 7px;border-radius:9999px;font-size:11px;font-weight:600}
         @media (max-width:1120px){.app-header{padding:12px 24px}.app-header-nav{gap:2px}.app-header-link{padding:6px 9px}.app-header-search{max-width:420px}}
-        @media (max-width:900px){.app-header-inner{gap:12px}.app-header-brand{display:none}.app-header-nav .app-header-link{display:none}.app-header-search{max-width:none}.app-header-submit{padding:7px 12px}}
-        @media (max-width:620px){.app-header{padding:10px 14px}.app-header-search{display:none}}
+        @media (max-width:900px){.app-header-inner{gap:12px}.app-header-nav .app-header-link{display:none}.app-header-search{max-width:none}.app-header-submit{padding:7px 12px}}
+        @media (max-width:620px){
+          .app-header{padding:10px 14px}
+          .app-header-inner{display:grid;grid-template-columns:auto 1fr auto;gap:10px}
+          .app-header-logo{min-width:0}
+          .app-header-brand{display:block;font-size:18px}
+          .app-header-nav{grid-column:2;margin-left:auto}
+          .app-header-nav>div{max-width:132px}
+          .app-header-menu-toggle{display:flex;grid-column:3}
+          .app-header-search{grid-column:1/-1;grid-row:2;width:100%;max-width:none;padding-left:10px;gap:6px}
+          .app-header-search .app-header-submit{min-width:44px;min-height:36px;padding:7px 11px}
+          .app-header-input{min-width:0;font-size:16px}
+          .app-header-mobile-menu{position:fixed;top:61px;left:12px;right:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(18,18,18,.98);box-shadow:0 24px 70px rgba(0,0,0,.55);z-index:60}
+          .app-header.has-search .app-header-mobile-menu{top:112px}
+          .app-header-mobile-link{display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 14px;border-radius:9px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.72);font-size:13px;text-decoration:none}
+          .app-header-mobile-link.active{background:rgba(255,255,255,.12);color:#fff}
+        }
       `}</style>
 
       <div className="app-header-inner">
@@ -126,7 +153,30 @@ export default function AppHeader({
         })}
           <UserMenu variant="filled" />
         </nav>
+        <button
+          type="button"
+          className="app-header-menu-toggle"
+          aria-label={mobileMenuOpen ? "关闭导航菜单" : "打开导航菜单"}
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen(value => !value)}
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </div>
+      {mobileMenuOpen && (
+        <nav className="app-header-mobile-menu" aria-label="移动端导航">
+          {NAV.map(item => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`app-header-mobile-link${isActive(item.to) ? " active" : ""}`}
+            >
+              <span>{item.label}</span>
+              {item.to === "/watchlist" && count > 0 && <span>{count}/{capacity}</span>}
+            </Link>
+          ))}
+        </nav>
+      )}
     </header>
   );
 }

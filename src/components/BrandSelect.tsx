@@ -38,6 +38,19 @@ function matchesBrandPrefix(brand: BrandSummary, q: string) {
   return name.startsWith(q) || name.split(/[\s-]+/).some(part => part.startsWith(q));
 }
 
+function dedupeBrands(items: BrandSummary[]) {
+  const byName = new Map<string, BrandSummary>();
+  for (const brand of items) {
+    const key = brand.name.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (!key) continue;
+    const current = byName.get(key);
+    if (!current || (brand.totalTransactions ?? 0) > (current.totalTransactions ?? 0)) {
+      byName.set(key, brand);
+    }
+  }
+  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export default function BrandSelect({ value, onChange, fontFamily, compact = false }: Props) {
   const [open, setOpen] = useState(false);
   const [brands, setBrands] = useState<BrandSummary[]>(FALLBACK_BRANDS);
@@ -53,7 +66,7 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
     listBrands()
       .then(r => {
         if (!alive || !r.items?.length) return;
-        setBrands([...r.items].sort((a, b) => a.name.localeCompare(b.name)));
+        setBrands(dedupeBrands(r.items));
       })
       .catch(() => undefined);
     return () => { alive = false; };
@@ -169,7 +182,7 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
   }
 
   return (
-    <div ref={rootRef} onKeyDown={handleRootKeyDown} style={{ position: "relative", flexShrink: 0, zIndex: open ? 20 : 2 }}>
+    <div className="brand-select-root" ref={rootRef} onKeyDown={handleRootKeyDown} style={{ position: "relative", flexShrink: 0, zIndex: open ? 20 : 2 }}>
       <button
         type="button"
         aria-haspopup="listbox"
@@ -182,6 +195,7 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
           e.preventDefault();
           jumpToLetter(nextLetter);
         }}
+        className="brand-select-trigger"
         style={{
           width: buttonWidth,
           height: compact ? 34 : 40,
@@ -230,6 +244,7 @@ export default function BrandSelect({ value, onChange, fontFamily, compact = fal
           <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "10px", background: "rgba(255,255,255,0.06)", marginBottom: "10px" }}>
             <Search size={14} color="rgba(255,255,255,0.35)" />
             <input
+              className="brand-select-search"
               value={query}
               onChange={e => updateQuery(e.target.value)}
               placeholder="搜索品牌，或用 A-Z 快速定位"
