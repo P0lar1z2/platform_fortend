@@ -617,7 +617,9 @@ export default function GoofishSubscriptions() {
           )}
 
           <section className="panel">
-            <div className="panel-head"><h2>ref 订阅</h2><Bell size={16} /></div>
+            <div className="panel-head"><h2>订阅展示</h2><Bell size={16} /></div>
+            {/* ref 订阅添加表单暂时移除：闲鱼收藏已与平台联通，订阅由收藏同步，不再手动添加 ref 订阅；本面板仅展示当前已订阅内容。如需恢复把 false 改回。 */}
+            {false && (
             <div className="form">
               <input value={refForm.reference} onChange={e => setRefForm(v => ({ ...v, reference: e.target.value }))} placeholder="ref" />
               <input value={refForm.brand} onChange={e => setRefForm(v => ({ ...v, brand: e.target.value }))} placeholder="品牌" />
@@ -626,6 +628,7 @@ export default function GoofishSubscriptions() {
               <input value={refForm.note} onChange={e => setRefForm(v => ({ ...v, note: e.target.value }))} placeholder="备注" />
               <button className="primary wide" onClick={addRef} disabled={busy === "ref:add"}><Plus size={15} /> 添加 ref 订阅</button>
             </div>
+            )}
             <div className="rows">
               {refs.length === 0 ? <div className="row muted">暂无 ref 订阅</div> : refs.map(sub => (
                 <div className="row" key={sub.reference}>
