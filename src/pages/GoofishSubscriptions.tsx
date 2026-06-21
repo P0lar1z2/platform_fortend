@@ -11,7 +11,6 @@ import {
   createLarkBindCode,
   deleteAccount,
   deleteLarkBinding,
-  deleteRefSubscription,
   deleteSellerSubscription,
   getCookie,
   getLarkBindingStatus,
@@ -429,18 +428,6 @@ export default function GoofishSubscriptions() {
     }
   }
 
-  async function removeRef(reference: string) {
-    setBusy(`ref:${reference}`);
-    try {
-      await deleteRefSubscription(reference);
-      load();
-    } catch (e: any) {
-      push(e?.response?.data?.error || "删除 ref 订阅失败", "error");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return (
     <div className="gf-page" style={gated ? { filter: "blur(4px)", pointerEvents: "none", userSelect: "none" } : undefined}>
       {gated && createPortal(
@@ -638,7 +625,7 @@ export default function GoofishSubscriptions() {
                   <div className="icon-actions">
                     <button className="icon-btn" onClick={() => triggerRef(sub)} title="立即触发搜索"><RefreshCw size={16} /></button>
                     <button className="icon-btn" onClick={() => toggleRef(sub)} title={sub.enabled ? "暂停" : "启用"}>{sub.enabled ? <PauseCircle size={16} /> : <PlayCircle size={16} />}</button>
-                    <button className="icon-btn" onClick={() => removeRef(sub.reference)} title="删除"><Trash2 size={16} /></button>
+                    {/* ref 订阅由 watchlist 收藏同步,删除须在关注列表取消收藏,后台不提供删除入口(避免两侧不同步) */}
                   </div>
                 </div>
               ))}

@@ -228,11 +228,6 @@ export async function setRefSubscriptionEnabled(reference: string, enabled: bool
   return data.subscription;
 }
 
-export async function deleteRefSubscription(reference: string): Promise<void> {
-  if (API_MOCK) return;
-  await apiClient.delete(`/v1/goofish/ref-subscriptions/${encodeURIComponent(reference)}`);
-}
-
 export async function triggerRefSubscription(reference: string): Promise<{ request_id: string; keyword?: string }> {
   if (API_MOCK) return { request_id: `mock-ref-${reference}`, keyword: reference };
   const { data } = await apiClient.post<{ request_id: string; keyword?: string }>(
