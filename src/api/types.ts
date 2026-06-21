@@ -275,6 +275,7 @@ export interface GoofishSellerSubscription {
   owner_user_id?: string;
   seller_id: string;
   seller_name?: string | null;
+  seller_avatar?: string | null;
   note?: string | null;
   enabled: boolean;
   crawl_interval_minutes: number;
