@@ -172,8 +172,9 @@ export default function GoofishSubscriptions() {
   const [opportunities, setOpportunities] = useState<GoofishOpportunity[]>([]);
   const [larkBinding, setLarkBinding] = useState<LarkBindingStatus | null>(null);
   const [bindCode, setBindCode] = useState<LarkBindCode | null>(null);
-  const [sellerForm, setSellerForm] = useState({ seller_id: "", seller_name: "", interval: "60", note: "" });
-  const [refForm, setRefForm] = useState({ reference: "", brand: "", keyword: "", interval: "60", note: "" });
+  // 抓取间隔固定为一天(后端默认 1440 分钟),不再让用户选择,故表单不含 interval 字段。
+  const [sellerForm, setSellerForm] = useState({ seller_id: "", seller_name: "", note: "" });
+  const [refForm, setRefForm] = useState({ reference: "", brand: "", keyword: "", note: "" });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -332,9 +333,8 @@ export default function GoofishSubscriptions() {
         seller_id: sellerId,
         seller_name: sellerForm.seller_name.trim() || undefined,
         note: sellerForm.note.trim() || undefined,
-        crawl_interval_minutes: Number(sellerForm.interval) || 60,
       });
-      setSellerForm({ seller_id: "", seller_name: "", interval: "60", note: "" });
+      setSellerForm({ seller_id: "", seller_name: "", note: "" });
       push("商家订阅已保存", "success");
       load();
     } catch (e: any) {
@@ -354,9 +354,8 @@ export default function GoofishSubscriptions() {
         brand: refForm.brand.trim() || undefined,
         keyword: refForm.keyword.trim() || undefined,
         note: refForm.note.trim() || undefined,
-        crawl_interval_minutes: Number(refForm.interval) || 60,
       });
-      setRefForm({ reference: "", brand: "", keyword: "", interval: "60", note: "" });
+      setRefForm({ reference: "", brand: "", keyword: "", note: "" });
       push("ref 订阅已保存", "success");
       load();
     } catch (e: any) {
@@ -582,7 +581,6 @@ export default function GoofishSubscriptions() {
             <div className="form">
               <input value={sellerForm.seller_id} onChange={e => setSellerForm(v => ({ ...v, seller_id: e.target.value }))} placeholder="商家 ID / user_id" />
               <input value={sellerForm.seller_name} onChange={e => setSellerForm(v => ({ ...v, seller_name: e.target.value }))} placeholder="商家名称" />
-              <input value={sellerForm.interval} onChange={e => setSellerForm(v => ({ ...v, interval: e.target.value }))} placeholder="间隔分钟" />
               <input value={sellerForm.note} onChange={e => setSellerForm(v => ({ ...v, note: e.target.value }))} placeholder="备注" />
               <button className="primary wide" onClick={addSeller} disabled={busy === "seller:add"}><Plus size={15} /> 添加商家订阅</button>
             </div>
@@ -611,7 +609,6 @@ export default function GoofishSubscriptions() {
               <input value={refForm.reference} onChange={e => setRefForm(v => ({ ...v, reference: e.target.value }))} placeholder="ref" />
               <input value={refForm.brand} onChange={e => setRefForm(v => ({ ...v, brand: e.target.value }))} placeholder="品牌" />
               <input className="wide" value={refForm.keyword} onChange={e => setRefForm(v => ({ ...v, keyword: e.target.value }))} placeholder="搜索关键词，留空时用 品牌 + ref" />
-              <input value={refForm.interval} onChange={e => setRefForm(v => ({ ...v, interval: e.target.value }))} placeholder="间隔分钟" />
               <input value={refForm.note} onChange={e => setRefForm(v => ({ ...v, note: e.target.value }))} placeholder="备注" />
               <button className="primary wide" onClick={addRef} disabled={busy === "ref:add"}><Plus size={15} /> 添加 ref 订阅</button>
             </div>
