@@ -250,6 +250,7 @@ export interface GoofishAccount {
   liveStatus?: string;   // 内存会话状态：pending / need_face / expired / error...
   unb?: string | null;
   updatedAt?: number | null;  // epoch 秒
+  ownerUserId?: string | null; // 归属网站用户(operator 视图展示;普通用户只会看到自己的号)
 }
 
 export interface GoofishStatus {

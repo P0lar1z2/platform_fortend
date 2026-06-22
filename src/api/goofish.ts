@@ -21,7 +21,13 @@ interface Envelope<T> {
 // goofish_login /accounts 返回的原始 map（snake_case）
 type AccountsMap = Record<
   string,
-  { status?: string; unb?: string | null; updated_at?: number | null; live_status?: string }
+  {
+    status?: string;
+    unb?: string | null;
+    updated_at?: number | null;
+    live_status?: string;
+    owner_user_id?: string | null;
+  }
 >;
 
 // 1x1 占位 png，mock 模式下让二维码框有东西可渲染
@@ -88,6 +94,7 @@ export async function listAccounts(): Promise<GoofishAccount[]> {
     liveStatus: v.live_status,
     unb: v.unb ?? null,
     updatedAt: v.updated_at ?? null,
+    ownerUserId: v.owner_user_id ?? null,
   }));
 }
 

@@ -177,8 +177,11 @@ export default function GoofishSubscriptions() {
   const { push } = useToast();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  // 闲鱼后台为运营功能 → 仅 operator 可访问,其余(游客/普通用户)看蒙版。
-  const gated = !authLoading && (!user || user.role !== "operator");
+  // per-user 绑号:登录用户即可进来绑自己的闲鱼号、管理自己的订阅(后端全部按
+  // owner_user_id 作用域,普通用户只见自己的账号/订阅/机会;operator 见全部)。
+  // 仅游客(未登录)看蒙版。
+  const gated = !authLoading && !user;
+  const isOperator = !!user && user.role === "operator";
   // 账号管理
   const [accounts, setAccounts] = useState<GoofishAccount[]>([]);
   const [newAccount, setNewAccount] = useState("");
@@ -451,8 +454,8 @@ export default function GoofishSubscriptions() {
       {gated && createPortal(
         <LoginPageGate
           onClose={() => navigate("/")}
-          title="闲鱼后台为运营功能"
-          description="该页面用于闲鱼账号与抓取订阅管理，仅运营账号可访问。如需开通请联系管理员。"
+          title="请先登录"
+          description="登录后即可绑定你自己的闲鱼账号并管理抓取订阅。"
         />,
         document.body,
       )}
@@ -518,14 +521,14 @@ export default function GoofishSubscriptions() {
         <div className="gf-top">
           <div className="gf-title">
             <h1>闲鱼后台</h1>
-            <p>管理闲鱼登录账号与抓取订阅；monitor 查到新商品后会发 Lark 通知。</p>
+            <p>绑定你自己的闲鱼账号与抓取订阅；monitor 查到新商品后会发 Lark 通知。</p>
           </div>
           <button className="gf-action" onClick={load} disabled={loading}><RefreshCw size={15} /> 刷新</button>
         </div>
 
         {/* 账号管理 */}
         <section className="panel section" style={{ marginTop: 0 }}>
-          <div className="panel-head"><h2>闲鱼账号</h2><span className="muted">{accounts.length}</span></div>
+          <div className="panel-head"><h2>我的闲鱼账号</h2><span className="muted">{accounts.length}</span></div>
           <div className="acct-add">
             <input
               value={newAccount}
@@ -549,7 +552,12 @@ export default function GoofishSubscriptions() {
               const live = a.liveStatus && a.liveStatus !== a.status ? a.liveStatus : undefined;
               return (
                 <div key={a.account} className="acct-row">
-                  <span style={{ fontWeight: 500 }}>{a.account}</span>
+                  <span style={{ fontWeight: 500, display: "inline-flex", flexDirection: "column" }}>
+                    {a.account}
+                    {isOperator && a.ownerUserId && (
+                      <span className="muted" style={{ fontSize: 11, fontWeight: 400 }}>归属 {a.ownerUserId}</span>
+                    )}
+                  </span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                     <span style={{ width: 7, height: 7, borderRadius: 9999, background: statusColor(a.status) }} />
                     <span style={{ color: statusColor(a.status) }}>{statusLabel(a.status)}</span>
