@@ -203,6 +203,17 @@ function txSortValue(tx: MarketTx, field: TxSortField): number {
   return Number.isFinite(time) ? time : Number.NEGATIVE_INFINITY;
 }
 
+function exclusionReasonLabel(reason?: string): string {
+  switch (reason) {
+    case "brand_mismatch": return "品牌不符";
+    case "match_quality": return "匹配未确认";
+    case "low_confidence": return "低置信度";
+    case "accessory_only": return "非腕表商品";
+    case "price_outlier": return "价格异常";
+    default: return "异常样本";
+  }
+}
+
 function ExternalListingLink({
   href,
   children,
@@ -242,6 +253,7 @@ export default function WatchDetail() {
   const [txPage, setTxPage] = useState<MarketTransactionsPage | null>(null);
   const [txLoading, setTxLoading] = useState(false);
   const [txSort, setTxSort] = useState<TxSort | null>(null);
+  const [showExcludedTx, setShowExcludedTx] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const txPP = 10;
 
@@ -276,12 +288,21 @@ export default function WatchDetail() {
     let alive = true;
     setTxPage(null);
     setTxLoading(true);
-    fetchTransactions(ref, tw, txPg, txPP, txSort?.field, txSort?.dir, catalogId)
+    fetchTransactions(
+      ref,
+      tw,
+      txPg,
+      txPP,
+      txSort?.field,
+      txSort?.dir,
+      catalogId,
+      showExcludedTx,
+    )
       .then(nextPage => { if (alive) setTxPage(nextPage); })
       .catch(() => { if (alive) setTxPage(null); })
       .finally(() => { if (alive) setTxLoading(false); });
     return () => { alive = false; };
-  }, [ref, tw, txPg, txSort, catalogId]);
+  }, [ref, tw, txPg, txSort, catalogId, showExcludedTx]);
 
   // ── Section C: Trading Valuation ──
   const [inputMode, setInputMode] = useState("price");    // "price" = input buy price, "margin" = input target margin
@@ -344,6 +365,8 @@ export default function WatchDetail() {
   });
   const pData = market?.chart?.points ?? [];
   const txTotal = txPage?.total ?? 0;
+  const txRawTotal = txPage?.rawTotal ?? txTotal;
+  const txExcludedTotal = txPage?.excludedTotal ?? 0;
   const txTP = Math.max(1, txPage?.totalPages ?? 1);
   const txPD = txPage?.transactions ?? [];
   const sortedTxPD = useMemo(() => {
@@ -577,7 +600,36 @@ export default function WatchDetail() {
                   {DATA_SOURCES.map(s=>(<button key={s.key} className="sb" onClick={()=>setVisSrc(p=>p.includes(s.key)?p.filter(x=>x!==s.key):[...p,s.key])} style={{background:visSrc.includes(s.key)?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.02)",color:visSrc.includes(s.key)?(SOURCE_COLORS[s.key]||"#888"):"rgba(255,255,255,0.2)",fontFamily:bd,boxShadow:visSrc.includes(s.key)?`inset 0 0 0 1px ${SOURCE_COLORS[s.key]}33`:"none"}}>
                     <span style={{display:"inline-block",width:"7px",height:"7px",borderRadius:"50%",background:visSrc.includes(s.key)?(SOURCE_COLORS[s.key]||"#888"):"rgba(255,255,255,0.1)",marginRight:"5px"}}/>{s.name}
                   </button>))}
-                </>):(<span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>共 {txTotal} 笔交易记录{txLoading && txTotal>0 ? " · 加载中" : ""}</span>)}
+                </>):(
+                  <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
+                    <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>
+                      共 {showExcludedTx ? txRawTotal : txTotal} 笔交易记录
+                      {!showExcludedTx && txExcludedTotal > 0 ? ` · 已排除 ${txExcludedTotal} 笔异常` : ""}
+                      {txLoading && txTotal>0 ? " · 加载中" : ""}
+                    </span>
+                    {txExcludedTotal > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowExcludedTx(value => !value);
+                          setTxPg(1);
+                        }}
+                        style={{
+                          border:"1px solid rgba(245,158,11,0.24)",
+                          borderRadius:"9999px",
+                          padding:"4px 10px",
+                          background:showExcludedTx ? "rgba(245,158,11,0.14)" : "rgba(255,255,255,0.04)",
+                          color:showExcludedTx ? "#fbbf24" : "rgba(255,255,255,0.55)",
+                          fontSize:"11px",
+                          fontFamily:bd,
+                          cursor:"pointer",
+                        }}
+                      >
+                        {showExcludedTx ? "隐藏异常记录" : `显示异常记录 (${txExcludedTotal})`}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               <div style={{display:"flex",gap:"4px"}}>
                 <button className="mb" onClick={()=>setVm("chart")} style={{background:vm==="chart"?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)"}}><BarChart3 size={16} color={vm==="chart"?"#fff":"rgba(255,255,255,0.4)"}/></button>
@@ -613,7 +665,7 @@ export default function WatchDetail() {
                 </div>
               )}
               {sortedTxPD.map((tx,i)=>(
-                <div key={tx.id} className="tr" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
+                <div key={tx.id} className="tr watch-tx-row" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center",background:tx.isExcluded?"rgba(245,158,11,0.035)":undefined}}>
                   {/* Thumbnail — tx.thumbUrl (mongo product_image_url) */}
                   <div style={{width:"32px",height:"32px",borderRadius:"6px",overflow:"hidden",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                     {tx.thumbUrl
@@ -621,9 +673,19 @@ export default function WatchDetail() {
                       : <span style={{fontSize:"9px",color:"rgba(255,255,255,0.2)",fontFamily:bd}}>—</span>}
                   </div>
                   {/* Source badge — colored per source */}
-                  <span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:"6px",fontSize:"11px",fontWeight:500,background:`${SOURCE_COLORS[tx.source]}18`,color:SOURCE_COLORS[tx.source]||"#888",fontFamily:bd,width:"fit-content"}}>{tx.sourceName}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:"5px",flexWrap:"wrap"}}>
+                    <span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:"6px",fontSize:"11px",fontWeight:500,background:`${SOURCE_COLORS[tx.source]}18`,color:SOURCE_COLORS[tx.source]||"#888",fontFamily:bd,width:"fit-content"}}>{tx.sourceName}</span>
+                    {tx.isExcluded && (
+                      <span
+                        title="该记录保留用于审计，但不参与均价、最高/最低价、走势图或估值计算"
+                        style={{fontSize:"9px",padding:"2px 6px",borderRadius:"5px",background:"rgba(245,158,11,0.12)",color:"#fbbf24",border:"1px solid rgba(245,158,11,0.22)",fontFamily:bd,whiteSpace:"nowrap"}}
+                      >
+                        {exclusionReasonLabel(tx.exclusionReason)}
+                      </span>
+                    )}
+                  </div>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.date || tx.dateTime || "—"}</span>
-                  <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd}}>¥{(tx.price ?? 0).toLocaleString()}</span>
+                  <span style={{fontSize:"13px",fontWeight:600,color:tx.isExcluded?"#fbbf24":"#fff",fontFamily:bd}}>¥{(tx.price ?? 0).toLocaleString()}</span>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.condition}</span>
                   {/* Accessories — Box/Card badges matching screenshot style */}
                   <div style={{display:"flex",gap:"4px"}}>
