@@ -125,8 +125,6 @@ export interface MarketTx {
   ref?: string;
   listingUrl?: string;
   thumbUrl?: string;
-  isExcluded?: boolean;
-  exclusionReason?: "brand_mismatch" | "match_quality" | "low_confidence" | "accessory_only" | "price_outlier" | string;
 }
 
 export interface MarketOverall {
@@ -134,8 +132,6 @@ export interface MarketOverall {
   max: number;
   min: number;
   count: number;
-  rawCount?: number;
-  excludedCount?: number;
   maxTx?: MarketTx;
   minTx?: MarketTx;
 }
@@ -169,8 +165,6 @@ export interface MarketTransactionsPage {
   page: number;
   pageSize: number;
   total: number;
-  rawTotal?: number;
-  excludedTotal?: number;
   totalPages: number;
   transactions: MarketTx[];
 }
