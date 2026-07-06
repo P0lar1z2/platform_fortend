@@ -8,6 +8,7 @@ import WatchlistToggle from "../components/WatchlistToggle";
 import SearchEmptyState from "../components/SearchEmptyState";
 import BrandSelect from "../components/BrandSelect";
 import AppHeader from "../components/AppHeader";
+import Footer from "../components/Footer";
 import { WATCHLIST_CAPACITY } from "../lib/constants";
 import { searchWatches } from "../api/search";
 import { listBrands } from "../api/brands";
@@ -699,29 +700,7 @@ export default function SearchResults() {
 
       {/* overflow modal removed — toast 已统一提示（共享 WatchlistToggle 处理） */}
 
-      {/* ═══ FOOTER ═══ */}
-      <footer style={{
-        padding: "32px 40px 24px",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-      }}>
-        <div style={{
-          maxWidth: "1280px", margin: "0 auto",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <span style={{ fontFamily: heading, fontStyle: "italic", fontSize: "16px", color: "rgba(255,255,255,0.5)" }}>Raventik</span>
-            <span style={{ fontSize: "11px", fontWeight: 300, color: "rgba(255,255,255,0.25)", fontFamily: body }}>© 2026 谕鸦科技 Ravacle Inc.</span>
-          </div>
-          <div className="mobile-footer-links" style={{ display: "flex", gap: "20px" }}>
-            {["隐私政策", "服务条款", "联系我们"].map((link, i) => (
-              <a key={i} href="#" style={{ fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.3)", textDecoration: "none", transition: "color 0.2s", fontFamily: body }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.7)" }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.3)" }}
-              >{link}</a>
-            ))}
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -27,6 +27,7 @@ import { useWatchlist, type WatchlistEntry } from "../hooks/useWatchlist";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useToast } from "../components/Toast";
 import AppHeader from "../components/AppHeader";
+import Footer from "../components/Footer";
 import { WATCHLIST_CAPACITY, WATCHLIST_WARN_THRESHOLD } from "../lib/constants";
 import { buildPageList } from "../utils/pagination";
 import { getWatchHref } from "../lib/watchRoutes";
@@ -320,22 +321,7 @@ export default function Watchlist() {
         )}
       </main>
 
-      {/* ═══ FOOTER ═══ */}
-      <footer style={{padding:"32px 40px 24px",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
-            <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"16px",color:"rgba(255,255,255,0.5)"}}>Raventik</span>
-            <span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.25)",fontFamily:bd}}>© 2026 谕鸦科技 Ravacle Inc.</span>
-          </div>
-          <div className="mobile-footer-links" style={{display:"flex",gap:"20px"}}>
-            {["隐私政策","服务条款","联系我们"].map((l,i)=>(
-              <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}}
-                onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}}
-                onMouseLeave={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.3)"}}>{l}</a>
-            ))}
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

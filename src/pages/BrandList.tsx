@@ -12,6 +12,7 @@ import { ChevronRight } from "lucide-react";
 import { listBrands } from "../api/brands";
 import type { BrandSummary } from "../api/types";
 import AppHeader from "../components/AppHeader";
+import Footer from "../components/Footer";
 
 const hd = "'Instrument Serif','Noto Serif SC',serif";
 const bd = "'Barlow','Noto Sans SC',sans-serif";
@@ -329,20 +330,7 @@ export default function BrandList() {
         )}
       </main>
 
-      {/* ═══ FOOTER ═══ */}
-      <footer style={{padding:"40px 40px 28px",borderTop:"1px solid rgba(255,255,255,0.06)",marginTop:"40px"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
-            <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"16px",color:"rgba(255,255,255,0.5)"}}>Raventik</span>
-            <span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.25)",fontFamily:bd}}>© 2026 谕鸦科技 Ravacle Inc.</span>
-          </div>
-          <div className="mobile-footer-links" style={{display:"flex",gap:"20px"}}>
-            {["隐私政策","服务条款","联系我们"].map((link,i) => (
-              <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",fontFamily:bd}}>{link}</a>
-            ))}
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

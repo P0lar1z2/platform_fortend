@@ -11,6 +11,8 @@ import Config from "./pages/Config";
 import GoofishSubscriptions from "./pages/GoofishSubscriptions";
 import Login from "./pages/Login";
 import ExternalListingRedirect from "./pages/ExternalListingRedirect";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 export default function App() {
   return (
@@ -30,6 +32,8 @@ export default function App() {
           {/* 自助注册已下线,账号由运营开通;旧链接回登录页 */}
           <Route path="/signup" element={<Navigate to="/login" replace />} />
           <Route path="/external-listing" element={<ExternalListingRedirect />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
