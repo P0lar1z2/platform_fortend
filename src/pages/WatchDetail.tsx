@@ -19,7 +19,7 @@
 
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, X, ZoomIn } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
 import AppHeader from "../components/AppHeader";
 import { LoginActionGate } from "../components/LoginGate";
@@ -242,6 +242,7 @@ export default function WatchDetail() {
   const [txPage, setTxPage] = useState<MarketTransactionsPage | null>(null);
   const [txLoading, setTxLoading] = useState(false);
   const [txSort, setTxSort] = useState<TxSort | null>(null);
+  const [previewTx, setPreviewTx] = useState<MarketTx | null>(null);
   const [imgIdx, setImgIdx] = useState(0);
   const txPP = 10;
 
@@ -282,6 +283,24 @@ export default function WatchDetail() {
       .finally(() => { if (alive) setTxLoading(false); });
     return () => { alive = false; };
   }, [ref, tw, txPg, txSort, catalogId]);
+
+  useEffect(() => {
+    setPreviewTx(null);
+  }, [ref, tw, txPg, txSort, catalogId]);
+
+  useEffect(() => {
+    if (!previewTx) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewTx(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [previewTx]);
 
   // ── Section C: Trading Valuation ──
   const [inputMode, setInputMode] = useState("price");    // "price" = input buy price, "margin" = input target margin
@@ -393,6 +412,13 @@ export default function WatchDetail() {
         .gs{background:rgba(255,255,255,0.06);background-blend-mode:luminosity;backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px);border:none;border-radius:9999px;box-shadow:4px 4px 4px rgba(0,0,0,0.05),inset 0 1px 1px rgba(255,255,255,0.2);position:relative;overflow:hidden}
         .gs::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.4px;background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(255,255,255,0.2) 20%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 60%,rgba(255,255,255,0.2) 80%,rgba(255,255,255,0.5) 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
         .tr{transition:background 0.2s ease;cursor:pointer}.tr:hover{background:rgba(255,255,255,0.04)}
+        .tx-thumb-btn{width:32px;height:32px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:zoom-in;position:relative;padding:0;transition:all 0.2s ease}
+        .tx-thumb-btn:hover{border-color:rgba(255,255,255,0.22);background:rgba(255,255,255,0.08)}
+        .tx-thumb-btn:hover .tx-thumb-zoom{opacity:1}
+        .tx-thumb-zoom{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.32);color:#fff;opacity:0;transition:opacity 0.2s ease;pointer-events:none}
+        .tx-image-lightbox{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+        .tx-image-lightbox-card{width:min(920px,calc(100vw - 32px));max-height:calc(100vh - 48px);border-radius:20px;background:rgba(24,24,24,0.94);border:1px solid rgba(255,255,255,0.14);box-shadow:0 24px 80px rgba(0,0,0,0.5);overflow:hidden;display:flex;flex-direction:column}
+        .tx-image-lightbox-img{width:100%;height:min(72vh,680px);object-fit:contain;background:radial-gradient(ellipse at center,rgba(255,255,255,0.05),rgba(255,255,255,0.015))}
         .tw{transition:all 0.2s ease;cursor:pointer;border:none;padding:5px 12px;border-radius:9px;font-size:12px;font-weight:500}.tw:hover{background:rgba(255,255,255,0.1)}
         .sr{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}.sr:last-child{border-bottom:none}
         .mb{transition:all 0.2s ease;cursor:pointer;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}.mb:hover{background:rgba(255,255,255,0.12)}
@@ -434,6 +460,9 @@ export default function WatchDetail() {
           .watch-tx-row>:nth-child(4){grid-column:3;grid-row:1;font-size:14px!important}
           .watch-tx-row>:nth-child(n+5):nth-child(-n+9){display:none!important}
           .watch-tx-row>:nth-child(10){grid-column:3;grid-row:2}
+          .tx-image-lightbox{padding:14px}
+          .tx-image-lightbox-card{width:100%;max-height:calc(100vh - 28px);border-radius:16px}
+          .tx-image-lightbox-img{height:62vh}
           .valuation-conditions-grid,.valuation-summary-grid{grid-template-columns:1fr!important}
           .watch-wide-table{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
           .watch-wide-table>div{min-width:760px}
@@ -444,6 +473,45 @@ export default function WatchDetail() {
       `}</style>
 
       <AppHeader />
+
+      {previewTx?.thumbUrl && (
+        <div
+          className="tx-image-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="交易图片预览"
+          onClick={() => setPreviewTx(null)}
+        >
+          <div className="tx-image-lightbox-card" onClick={event => event.stopPropagation()}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"16px",padding:"14px 16px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  {previewTx.sourceName || previewTx.source || "交易记录"}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"10px",marginTop:"4px",fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.45)",fontFamily:bd,whiteSpace:"nowrap"}}>
+                  <span>{previewTx.date || previewTx.dateTime || "日期未知"}</span>
+                  <span>¥{(previewTx.price ?? 0).toLocaleString()}</span>
+                  <span>{previewTx.ref || ref}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="关闭图片预览"
+                onClick={() => setPreviewTx(null)}
+                style={{width:"36px",height:"36px",borderRadius:"10px",border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.78)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <img
+              className="tx-image-lightbox-img"
+              src={previewTx.thumbUrl}
+              alt={`${previewTx.sourceName || previewTx.source || "交易记录"} ${previewTx.date || ""}`}
+              onError={() => setPreviewTx(null)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Ambient */}
       <div style={{position:"fixed",top:0,left:"10%",width:"600px",height:"500px",background:"radial-gradient(ellipse,rgba(80,120,200,0.06) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>
@@ -653,11 +721,25 @@ export default function WatchDetail() {
               {sortedTxPD.map((tx,i)=>(
                 <div key={tx.id} className="tr watch-tx-row" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center"}}>
                   {/* Thumbnail — tx.thumbUrl (mongo product_image_url) */}
-                  <div style={{width:"32px",height:"32px",borderRadius:"6px",overflow:"hidden",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <button
+                    type="button"
+                    className="tx-thumb-btn"
+                    disabled={!tx.thumbUrl}
+                    aria-label={tx.thumbUrl ? "放大查看交易图片" : "无交易图片"}
+                    title={tx.thumbUrl ? "点击放大图片" : "无图片"}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (tx.thumbUrl) setPreviewTx(tx);
+                    }}
+                    style={{cursor:tx.thumbUrl ? "zoom-in" : "default"}}
+                  >
                     {tx.thumbUrl
-                      ? <img src={tx.thumbUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+                      ? <>
+                          <img src={tx.thumbUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+                          <span className="tx-thumb-zoom"><ZoomIn size={14} /></span>
+                        </>
                       : <span style={{fontSize:"9px",color:"rgba(255,255,255,0.2)",fontFamily:bd}}>—</span>}
-                  </div>
+                  </button>
                   {/* Source badge — colored per source */}
                   <span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:"6px",fontSize:"11px",fontWeight:500,background:`${SOURCE_COLORS[tx.source]}18`,color:SOURCE_COLORS[tx.source]||"#888",fontFamily:bd,width:"fit-content"}}>{tx.sourceName}</span>
                   <span style={{fontSize:"12px",fontWeight:400,color:"rgba(255,255,255,0.5)",fontFamily:bd}}>{tx.date || tx.dateTime || "—"}</span>
