@@ -18,12 +18,13 @@
  * ============================================================
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight } from "lucide-react";
+import { Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, Bookmark, SlidersHorizontal, X, CornerDownRight, Eye, EyeOff, TrendingUp } from "lucide-react";
 import { useViewPreference } from "../hooks/useViewPreference";
 import WatchlistToggle from "../components/WatchlistToggle";
 import AppHeader from "../components/AppHeader";
+import Footer from "../components/Footer";
 import { getBrand } from "../api/brands";
 import type { BrandDetail, WatchListItem } from "../api/types";
 import { buildPageList } from "../utils/pagination";
@@ -88,6 +89,8 @@ export default function BrandModels() {
   const [pageJump, setPageJump] = useState("1");
   const [familyFilter, setFamilyFilter] = useState("全部");
   const [showFilters, setShowFilters] = useState(false);
+  const [showZeroTransactions, setShowZeroTransactions] = useState(false); // 默认隐藏 0 交易型号
+  const [sortByTx, setSortByTx] = useState(true); // 默认按成交数从多到少；关闭则按 ref 字母序
 
   const hd = "'Instrument Serif','Noto Serif SC',serif";
   const bd = "'Barlow','Noto Sans SC',sans-serif";
@@ -105,25 +108,21 @@ export default function BrandModels() {
       family: familyFilter === "全部" ? undefined : familyFilter,
       page: currentPage,
       size: PER_PAGE,
-      sort_by: "transactions",
-      sort_dir: "desc",
+      sort_by: sortByTx ? "transactions" : undefined,
+      sort_dir: sortByTx ? "desc" : undefined,
+      include_zero: showZeroTransactions,
     })
       .then(d => setDetail(d))
       .catch(() => setDetail(null))
       .finally(() => setLoading(false));
-  }, [effectiveSlug, familyFilter, currentPage]);
+  }, [effectiveSlug, familyFilter, currentPage, showZeroTransactions, sortByTx]);
 
   const families = ["全部", ...(detail?.families ?? [])];
   const total = detail?.watches.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(currentPage, totalPages);
-  const pageData: WatchListItem[] = useMemo(
-    () => [...(detail?.watches.items ?? [])].sort((a, b) => {
-      const byTransactions = (b.transactions ?? 0) - (a.transactions ?? 0);
-      return byTransactions || a.ref.localeCompare(b.ref);
-    }),
-    [detail?.watches.items],
-  );
+  // 排序由服务端完成（按成交数 desc 跨页，或字母序），前端直接用返回顺序。
+  const pageData: WatchListItem[] = detail?.watches.items ?? [];
 
   const goPage = (p: number) => { setCurrentPage(Math.max(1, Math.min(p, totalPages))); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
@@ -211,6 +210,14 @@ export default function BrandModels() {
         <div className="mobile-toolbar" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"24px"}}>
           <p style={{fontSize:"13px",fontWeight:300,color:"rgba(255,255,255,0.4)",fontFamily:bd}}>{loading ? "加载中..." : `共 ${total} 个型号`}</p>
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+            <button className="mode-btn" onClick={() => { setSortByTx(v => !v); setCurrentPage(1); }} title={sortByTx ? "当前：按成交数排序（点击切字母序）" : "当前：字母序（点击按成交数排序）"} aria-pressed={sortByTx} style={{width:"auto",padding:"0 12px",gap:"6px",background:sortByTx?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",color:"#fff"}}>
+              <TrendingUp size={16} color={sortByTx?"#fff":"rgba(255,255,255,0.5)"}/>
+              <span style={{fontSize:"12px",fontWeight:500,fontFamily:bd,color:sortByTx?"#fff":"rgba(255,255,255,0.5)"}}>成交</span>
+            </button>
+            <button className="mode-btn" onClick={() => { setShowZeroTransactions(v => !v); setCurrentPage(1); }} title={showZeroTransactions ? "隐藏 0 条交易记录的型号" : "显示 0 条交易记录的型号"} aria-pressed={showZeroTransactions} style={{width:"auto",padding:"0 12px",gap:"6px",background:showZeroTransactions?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",color:"#fff"}}>
+              {showZeroTransactions ? <Eye size={16}/> : <EyeOff size={16} color="rgba(255,255,255,0.5)"/>}
+              <span style={{fontSize:"12px",fontWeight:500,fontFamily:bd}}>0 条</span>
+            </button>
             <button className="mode-btn" onClick={()=>setShowFilters(!showFilters)} style={{background:showFilters?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)"}}>
               <SlidersHorizontal size={16} color={showFilters?"#fff":"rgba(255,255,255,0.5)"}/>
             </button>
@@ -361,22 +368,7 @@ export default function BrandModels() {
 
       {/* overflow modal removed — toast 已统一提示 */}
 
-      {/* ═══ FOOTER ═══ */}
-      <footer style={{padding:"32px 40px 24px",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{maxWidth:"1280px",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
-            <span style={{fontFamily:hd,fontStyle:"italic",fontSize:"16px",color:"rgba(255,255,255,0.5)"}}>Raventik</span>
-            <span style={{fontSize:"11px",fontWeight:300,color:"rgba(255,255,255,0.25)",fontFamily:bd}}>© 2026 谕鸦科技 Ravacle Inc.</span>
-          </div>
-          <div className="mobile-footer-links" style={{display:"flex",gap:"20px"}}>
-            {["隐私政策","服务条款","联系我们"].map((l,i)=>(
-              <a key={i} href="#" style={{fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.3)",textDecoration:"none",transition:"color 0.2s",fontFamily:bd}}
-                onMouseEnter={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.7)"}}
-                onMouseLeave={e=>{(e.target as HTMLElement).style.color="rgba(255,255,255,0.3)"}}>{l}</a>
-            ))}
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

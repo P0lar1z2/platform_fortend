@@ -30,6 +30,7 @@ export async function fetchTransactions(
   sortBy?: "date" | "price",
   sortDir?: "asc" | "desc",
   catalogId?: string,
+  includeOutliers = false,
 ): Promise<MarketTransactionsPage> {
   if (!API_MOCK) {
     const { data } = await apiClient.get<MarketTransactionsPage>(
@@ -42,12 +43,23 @@ export async function fetchTransactions(
           sort_by: sortBy,
           sort_dir: sortDir,
           catalog_id: catalogId,
+          include_outliers: includeOutliers,
         },
       },
     );
     return data;
   }
-  return { period, windowDays: 90, page, pageSize, total: 0, totalPages: 0, transactions: [] };
+  return {
+    period,
+    windowDays: 90,
+    page,
+    pageSize,
+    total: 0,
+    rawTotal: 0,
+    excludedTotal: 0,
+    totalPages: 0,
+    transactions: [],
+  };
 }
 
 function MOCK_WATCH(ref: string, catalogId?: string): WatchInfo {
@@ -91,10 +103,10 @@ function MOCK_MARKET(period: Period): MarketResponse {
   return {
     period,
     windowDays: days,
-    overall: { avg: 1442746, max: 1788875, min: 1028295, count: 18 },
+    overall: { avg: 1442746, max: 1788875, min: 1028295, count: 18, rawCount: 18, excludedCount: 0 },
     perSource: [
-      { key: "starbuyer", name: "StarBuyers", avg: 1286419, max: 1691827, min: 1046968, count: 8 },
-      { key: "ecoauc", name: "EcoAuc", avg: 1567808, max: 1788875, min: 1028295, count: 10 },
+      { key: "starbuyer", name: "StarBuyers", avg: 1286419, max: 1691827, min: 1046968, count: 8, rawCount: 8, excludedCount: 0 },
+      { key: "ecoauc", name: "EcoAuc", avg: 1567808, max: 1788875, min: 1028295, count: 10, rawCount: 10, excludedCount: 0 },
     ],
     chart: { granularity, points },
   };

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark, TrendingUp, CornerDownRight } from "lucide-react";
+import { Search, ArrowUpRight, Clock, Grid3X3, List, ChevronLeft, ChevronRight, ArrowRight, ExternalLink, SlidersHorizontal, X, Bookmark, TrendingUp, CornerDownRight, Eye, EyeOff } from "lucide-react";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { useViewPreference } from "../hooks/useViewPreference";
 import { useWatchlist } from "../hooks/useWatchlist";
@@ -8,6 +8,7 @@ import WatchlistToggle from "../components/WatchlistToggle";
 import SearchEmptyState from "../components/SearchEmptyState";
 import BrandSelect from "../components/BrandSelect";
 import AppHeader from "../components/AppHeader";
+import Footer from "../components/Footer";
 import { WATCHLIST_CAPACITY } from "../lib/constants";
 import { searchWatches } from "../api/search";
 import { listBrands } from "../api/brands";
@@ -88,6 +89,7 @@ export default function SearchResults() {
   const urlBrand = params.get("brand") || "全部";
   const urlPage = Math.max(1, Number(params.get("page") || 1));
   const urlSort = params.get("sort") || "tx_desc"; // 默认按成交数排序
+  const showZeroTransactions = params.get("includeZero") === "1"; // 默认隐藏 0 交易型号
 
   const [searchValue, setSearchValue] = useState(urlQ);
   const [viewMode, setViewMode] = useViewPreference<"card" | "list">("search-view", "card");
@@ -141,12 +143,13 @@ export default function SearchResults() {
       page: urlPage,
       size: PER_PAGE,
       sort: urlSort,
+      include_zero: showZeroTransactions,
     })
       .then(r => { if (!alive) return; setPageData(r.items); setTotal(r.total); })
       .catch(() => { if (!alive) return; setPageData([]); setTotal(0); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; }; // 丢弃过期请求，避免旧结果覆盖新搜索
-  }, [urlQ, urlBrand, urlPage, urlSort]);
+  }, [urlQ, urlBrand, urlPage, urlSort, showZeroTransactions]);
 
   const brands = ["全部", ...brandNames];
 
@@ -391,6 +394,15 @@ export default function SearchResults() {
             }}>
               <TrendingUp size={16} color={urlSort === "tx_desc" ? "#fff" : "rgba(255,255,255,0.5)"} />
               <span style={{ fontSize: "12px", fontWeight: 500, color: urlSort === "tx_desc" ? "#fff" : "rgba(255,255,255,0.5)" }}>成交</span>
+            </button>
+
+            {/* Zero-transaction toggle: 默认隐藏 0 交易型号，点击显示 */}
+            <button className="mode-btn" onClick={() => updateParams({ includeZero: showZeroTransactions ? null : 1, page: 1 })} title={showZeroTransactions ? "隐藏 0 条交易记录的型号" : "显示 0 条交易记录的型号"} aria-pressed={showZeroTransactions} style={{
+              background: showZeroTransactions ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
+              color: "#fff", width: "auto", padding: "0 12px", display: "flex", alignItems: "center", gap: "6px",
+            }}>
+              {showZeroTransactions ? <Eye size={16} /> : <EyeOff size={16} color="rgba(255,255,255,0.5)" />}
+              <span style={{ fontSize: "12px", fontWeight: 500, color: showZeroTransactions ? "#fff" : "rgba(255,255,255,0.5)" }}>0 条</span>
             </button>
 
             {/* Divider */}
@@ -688,29 +700,7 @@ export default function SearchResults() {
 
       {/* overflow modal removed — toast 已统一提示（共享 WatchlistToggle 处理） */}
 
-      {/* ═══ FOOTER ═══ */}
-      <footer style={{
-        padding: "32px 40px 24px",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-      }}>
-        <div style={{
-          maxWidth: "1280px", margin: "0 auto",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <span style={{ fontFamily: heading, fontStyle: "italic", fontSize: "16px", color: "rgba(255,255,255,0.5)" }}>Raventik</span>
-            <span style={{ fontSize: "11px", fontWeight: 300, color: "rgba(255,255,255,0.25)", fontFamily: body }}>© 2026 谕鸦科技 Ravacle Inc.</span>
-          </div>
-          <div className="mobile-footer-links" style={{ display: "flex", gap: "20px" }}>
-            {["隐私政策", "服务条款", "联系我们"].map((link, i) => (
-              <a key={i} href="#" style={{ fontSize: "11px", fontWeight: 400, color: "rgba(255,255,255,0.3)", textDecoration: "none", transition: "color 0.2s", fontFamily: body }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.7)" }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = "rgba(255,255,255,0.3)" }}
-              >{link}</a>
-            ))}
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -21,7 +21,13 @@ interface Envelope<T> {
 // goofish_login /accounts 返回的原始 map（snake_case）
 type AccountsMap = Record<
   string,
-  { status?: string; unb?: string | null; updated_at?: number | null; live_status?: string }
+  {
+    status?: string;
+    unb?: string | null;
+    updated_at?: number | null;
+    live_status?: string;
+    owner_user_id?: string | null;
+  }
 >;
 
 // 1x1 占位 png，mock 模式下让二维码框有东西可渲染
@@ -39,7 +45,7 @@ const MOCK_SELLER_SUBSCRIPTIONS: GoofishSellerSubscription[] = [
     seller_name: "demo seller",
     note: "mock",
     enabled: true,
-    crawl_interval_minutes: 60,
+    crawl_interval_minutes: 1440,
     last_crawled_at: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -53,7 +59,7 @@ const MOCK_REF_SUBSCRIPTIONS: GoofishRefSubscription[] = [
     keyword: "Rolex 124300",
     note: "mock",
     enabled: true,
-    crawl_interval_minutes: 60,
+    crawl_interval_minutes: 1440,
     last_crawled_at: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -88,6 +94,7 @@ export async function listAccounts(): Promise<GoofishAccount[]> {
     liveStatus: v.live_status,
     unb: v.unb ?? null,
     updatedAt: v.updated_at ?? null,
+    ownerUserId: v.owner_user_id ?? null,
   }));
 }
 
@@ -158,7 +165,7 @@ export async function upsertSellerSubscription(input: {
       ...MOCK_SELLER_SUBSCRIPTIONS[0],
       ...input,
       enabled: input.enabled ?? true,
-      crawl_interval_minutes: input.crawl_interval_minutes ?? 60,
+      crawl_interval_minutes: input.crawl_interval_minutes ?? 1440,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -210,7 +217,7 @@ export async function upsertRefSubscription(input: {
       ...input,
       keyword: input.keyword || [input.brand, input.reference].filter(Boolean).join(" "),
       enabled: input.enabled ?? true,
-      crawl_interval_minutes: input.crawl_interval_minutes ?? 60,
+      crawl_interval_minutes: input.crawl_interval_minutes ?? 1440,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -226,11 +233,6 @@ export async function setRefSubscriptionEnabled(reference: string, enabled: bool
     { enabled }
   );
   return data.subscription;
-}
-
-export async function deleteRefSubscription(reference: string): Promise<void> {
-  if (API_MOCK) return;
-  await apiClient.delete(`/v1/goofish/ref-subscriptions/${encodeURIComponent(reference)}`);
 }
 
 export async function triggerRefSubscription(reference: string): Promise<{ request_id: string; keyword?: string }> {

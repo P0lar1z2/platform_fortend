@@ -8,6 +8,8 @@ export interface SearchParams {
   size?: number;
   /** "tx_desc" = 按成交数从多到少；省略 = 默认按字母序 */
   sort?: string;
+  /** true 显示零交易型号；省略/false = 隐藏 */
+  include_zero?: boolean;
 }
 
 export async function searchWatches(params: SearchParams): Promise<PageEnvelope<WatchListItem>> {

@@ -26,6 +26,8 @@ export interface BrandWatchesParams {
   size?: number;
   sort_by?: "transactions";
   sort_dir?: "asc" | "desc";
+  /** true 显示零交易型号；省略/false = 隐藏 */
+  include_zero?: boolean;
 }
 
 export async function getBrand(slug: string, params?: BrandWatchesParams): Promise<BrandDetail> {

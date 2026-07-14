@@ -11,7 +11,6 @@ import {
   createLarkBindCode,
   deleteAccount,
   deleteLarkBinding,
-  deleteRefSubscription,
   deleteSellerSubscription,
   getCookie,
   getLarkBindingStatus,
@@ -59,6 +58,25 @@ function fmt(value?: DateLike) {
   const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) return "-";
   return date.toLocaleString("zh-CN");
+}
+
+// 商家输入既可粘贴 id,也可直接粘整段闲鱼个人主页 URL
+// (https://www.goofish.com/personal?...&userId=798171003),从 userId 参数解析出 id。
+// 兜底:URL 解析不到就在字符串里抠 userId=NNN;再不行返回原始输入(可能就是裸 id)。
+function parseSellerId(input: string): string {
+  const raw = input.trim();
+  if (!raw) return "";
+  if (/^\d+$/.test(raw)) return raw;
+  try {
+    const url = new URL(raw);
+    const uid = url.searchParams.get("userId");
+    if (uid) return uid.trim();
+  } catch {
+    // 不是合法 URL,落到下面的正则兜底
+  }
+  const m = raw.match(/userId=(\d+)/);
+  if (m) return m[1];
+  return raw;
 }
 
 // 账号更新时间是 epoch 秒，单独格式化（与上面的 DateLike/毫秒口径区分）。
@@ -159,8 +177,11 @@ export default function GoofishSubscriptions() {
   const { push } = useToast();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  // 闲鱼后台为运营功能 → 仅 operator 可访问,其余(游客/普通用户)看蒙版。
-  const gated = !authLoading && (!user || user.role !== "operator");
+  // per-user 绑号:登录用户即可进来绑自己的闲鱼号、管理自己的订阅(后端全部按
+  // owner_user_id 作用域,普通用户只见自己的账号/订阅/机会;operator 见全部)。
+  // 仅游客(未登录)看蒙版。
+  const gated = !authLoading && !user;
+  const isOperator = !!user && user.role === "operator";
   // 账号管理
   const [accounts, setAccounts] = useState<GoofishAccount[]>([]);
   const [newAccount, setNewAccount] = useState("");
@@ -173,8 +194,9 @@ export default function GoofishSubscriptions() {
   const [opportunities, setOpportunities] = useState<GoofishOpportunity[]>([]);
   const [larkBinding, setLarkBinding] = useState<LarkBindingStatus | null>(null);
   const [bindCode, setBindCode] = useState<LarkBindCode | null>(null);
-  const [sellerForm, setSellerForm] = useState({ seller_id: "", seller_name: "", interval: "60", note: "" });
-  const [refForm, setRefForm] = useState({ reference: "", brand: "", keyword: "", interval: "60", note: "" });
+  // 抓取间隔固定为一天(后端默认 1440 分钟),不再让用户选择,故表单不含 interval 字段。
+  const [sellerForm, setSellerForm] = useState({ seller_id: "", seller_name: "", note: "" });
+  const [refForm, setRefForm] = useState({ reference: "", brand: "", keyword: "", note: "" });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -183,7 +205,7 @@ export default function GoofishSubscriptions() {
     try {
       const [accountData, sellerData, refData, itemData, opportunityData] = await Promise.all([
         listAccounts(),
-        // 商家订阅暂时移除：后端路由已停用,容错为空避免拖垮整页加载。
+        // 容错为空:商家订阅接口偶发失败时不拖垮整页加载。
         listSellerSubscriptions().catch(() => []),
         listRefSubscriptions(),
         listGoofishItems(),
@@ -325,17 +347,16 @@ export default function GoofishSubscriptions() {
   }
 
   async function addSeller() {
-    const sellerId = sellerForm.seller_id.trim();
-    if (!sellerId) { push("请输入商家 ID", "warning"); return; }
+    const sellerId = parseSellerId(sellerForm.seller_id);
+    if (!sellerId) { push("请输入商家 ID 或个人主页链接", "warning"); return; }
     setBusy("seller:add");
     try {
       await upsertSellerSubscription({
         seller_id: sellerId,
         seller_name: sellerForm.seller_name.trim() || undefined,
         note: sellerForm.note.trim() || undefined,
-        crawl_interval_minutes: Number(sellerForm.interval) || 60,
       });
-      setSellerForm({ seller_id: "", seller_name: "", interval: "60", note: "" });
+      setSellerForm({ seller_id: "", seller_name: "", note: "" });
       push("商家订阅已保存", "success");
       load();
     } catch (e: any) {
@@ -355,9 +376,8 @@ export default function GoofishSubscriptions() {
         brand: refForm.brand.trim() || undefined,
         keyword: refForm.keyword.trim() || undefined,
         note: refForm.note.trim() || undefined,
-        crawl_interval_minutes: Number(refForm.interval) || 60,
       });
-      setRefForm({ reference: "", brand: "", keyword: "", interval: "60", note: "" });
+      setRefForm({ reference: "", brand: "", keyword: "", note: "" });
       push("ref 订阅已保存", "success");
       load();
     } catch (e: any) {
@@ -429,25 +449,13 @@ export default function GoofishSubscriptions() {
     }
   }
 
-  async function removeRef(reference: string) {
-    setBusy(`ref:${reference}`);
-    try {
-      await deleteRefSubscription(reference);
-      load();
-    } catch (e: any) {
-      push(e?.response?.data?.error || "删除 ref 订阅失败", "error");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return (
     <div className="gf-page" style={gated ? { filter: "blur(4px)", pointerEvents: "none", userSelect: "none" } : undefined}>
       {gated && createPortal(
         <LoginPageGate
           onClose={() => navigate("/")}
-          title="闲鱼后台为运营功能"
-          description="该页面用于闲鱼账号与抓取订阅管理，仅运营账号可访问。如需开通请联系管理员。"
+          title="请先登录"
+          description="登录后即可绑定你自己的闲鱼账号并管理抓取订阅。"
         />,
         document.body,
       )}
@@ -479,6 +487,9 @@ export default function GoofishSubscriptions() {
         .status.on{background:rgba(16,185,129,.16);color:#34d399}
         .status.off{background:rgba(245,158,11,.16);color:#fbbf24}
         .icon-actions{display:flex;justify-content:flex-end;gap:8px}
+        .gf-seller{display:flex;align-items:center;gap:10px;min-width:0}
+        .gf-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none;background:rgba(255,255,255,.08)}
+        .gf-avatar-fallback{display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:rgba(255,255,255,.75);text-transform:uppercase}
         .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:rgba(255,255,255,.72);cursor:pointer}
         .section{margin-top:18px}
         .item-row{display:grid;grid-template-columns:72px 1fr 110px 120px;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.055);font-size:13px}
@@ -510,14 +521,14 @@ export default function GoofishSubscriptions() {
         <div className="gf-top">
           <div className="gf-title">
             <h1>闲鱼后台</h1>
-            <p>管理闲鱼登录账号与抓取订阅；monitor 查到新商品后会发 Lark 通知。</p>
+            <p>绑定你自己的闲鱼账号与抓取订阅；monitor 查到新商品后会发 Lark 通知。</p>
           </div>
           <button className="gf-action" onClick={load} disabled={loading}><RefreshCw size={15} /> 刷新</button>
         </div>
 
         {/* 账号管理 */}
         <section className="panel section" style={{ marginTop: 0 }}>
-          <div className="panel-head"><h2>闲鱼账号</h2><span className="muted">{accounts.length}</span></div>
+          <div className="panel-head"><h2>我的闲鱼账号</h2><span className="muted">{accounts.length}</span></div>
           <div className="acct-add">
             <input
               value={newAccount}
@@ -541,7 +552,12 @@ export default function GoofishSubscriptions() {
               const live = a.liveStatus && a.liveStatus !== a.status ? a.liveStatus : undefined;
               return (
                 <div key={a.account} className="acct-row">
-                  <span style={{ fontWeight: 500 }}>{a.account}</span>
+                  <span style={{ fontWeight: 500, display: "inline-flex", flexDirection: "column" }}>
+                    {a.account}
+                    {isOperator && a.ownerUserId && (
+                      <span className="muted" style={{ fontSize: 11, fontWeight: 400 }}>归属 {a.ownerUserId}</span>
+                    )}
+                  </span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                     <span style={{ width: 7, height: 7, borderRadius: 9999, background: statusColor(a.status) }} />
                     <span style={{ color: statusColor(a.status) }}>{statusLabel(a.status)}</span>
@@ -588,21 +604,24 @@ export default function GoofishSubscriptions() {
         </section>
 
         <div className="gf-grid">
-          {/* 商家订阅暂时移除（注释掉）：后端 seller-subscriptions 路由已停用,与"商家订阅暂时移除"方向一致。如需恢复:把 false 改回，并恢复后端路由。 */}
-          {false && (
           <section className="panel">
             <div className="panel-head"><h2>商家订阅</h2><Bell size={16} /></div>
             <div className="form">
-              <input value={sellerForm.seller_id} onChange={e => setSellerForm(v => ({ ...v, seller_id: e.target.value }))} placeholder="商家 ID / user_id" />
-              <input value={sellerForm.seller_name} onChange={e => setSellerForm(v => ({ ...v, seller_name: e.target.value }))} placeholder="商家名称" />
-              <input value={sellerForm.interval} onChange={e => setSellerForm(v => ({ ...v, interval: e.target.value }))} placeholder="间隔分钟" />
+              {/* 既可填裸 id,也可直接粘整段个人主页链接,addSeller 里 parseSellerId 解析 userId */}
+              <input className="wide" value={sellerForm.seller_id} onChange={e => setSellerForm(v => ({ ...v, seller_id: e.target.value }))} placeholder="商家 ID 或个人主页链接 (…/personal?…userId=…)" />
+              <input value={sellerForm.seller_name} onChange={e => setSellerForm(v => ({ ...v, seller_name: e.target.value }))} placeholder="商家名称（留空自动获取）" />
               <input value={sellerForm.note} onChange={e => setSellerForm(v => ({ ...v, note: e.target.value }))} placeholder="备注" />
               <button className="primary wide" onClick={addSeller} disabled={busy === "seller:add"}><Plus size={15} /> 添加商家订阅</button>
             </div>
             <div className="rows">
               {sellers.length === 0 ? <div className="row muted">暂无商家订阅</div> : sellers.map(sub => (
                 <div className="row" key={sub.seller_id}>
-                  <div><div>{sub.seller_name || sub.seller_id}</div><div className="muted">{sub.seller_id}</div></div>
+                  <div className="gf-seller">
+                    {sub.seller_avatar
+                      ? <img className="gf-avatar" src={sub.seller_avatar} alt="" referrerPolicy="no-referrer" />
+                      : <span className="gf-avatar gf-avatar-fallback">{(sub.seller_name || sub.seller_id).slice(0, 1)}</span>}
+                    <div><div>{sub.seller_name || sub.seller_id}</div><div className="muted">{sub.seller_id}</div></div>
+                  </div>
                   <Status enabled={sub.enabled} />
                   <div className="muted">{fmt(sub.last_crawled_at)}</div>
                   <div className="icon-actions">
@@ -614,18 +633,19 @@ export default function GoofishSubscriptions() {
               ))}
             </div>
           </section>
-          )}
 
           <section className="panel">
-            <div className="panel-head"><h2>ref 订阅</h2><Bell size={16} /></div>
+            <div className="panel-head"><h2>订阅展示</h2><Bell size={16} /></div>
+            {/* ref 订阅添加表单暂时移除：闲鱼收藏已与平台联通，订阅由收藏同步，不再手动添加 ref 订阅；本面板仅展示当前已订阅内容。如需恢复把 false 改回。 */}
+            {false && (
             <div className="form">
               <input value={refForm.reference} onChange={e => setRefForm(v => ({ ...v, reference: e.target.value }))} placeholder="ref" />
               <input value={refForm.brand} onChange={e => setRefForm(v => ({ ...v, brand: e.target.value }))} placeholder="品牌" />
               <input className="wide" value={refForm.keyword} onChange={e => setRefForm(v => ({ ...v, keyword: e.target.value }))} placeholder="搜索关键词，留空时用 品牌 + ref" />
-              <input value={refForm.interval} onChange={e => setRefForm(v => ({ ...v, interval: e.target.value }))} placeholder="间隔分钟" />
               <input value={refForm.note} onChange={e => setRefForm(v => ({ ...v, note: e.target.value }))} placeholder="备注" />
               <button className="primary wide" onClick={addRef} disabled={busy === "ref:add"}><Plus size={15} /> 添加 ref 订阅</button>
             </div>
+            )}
             <div className="rows">
               {refs.length === 0 ? <div className="row muted">暂无 ref 订阅</div> : refs.map(sub => (
                 <div className="row" key={sub.reference}>
@@ -635,7 +655,7 @@ export default function GoofishSubscriptions() {
                   <div className="icon-actions">
                     <button className="icon-btn" onClick={() => triggerRef(sub)} title="立即触发搜索"><RefreshCw size={16} /></button>
                     <button className="icon-btn" onClick={() => toggleRef(sub)} title={sub.enabled ? "暂停" : "启用"}>{sub.enabled ? <PauseCircle size={16} /> : <PlayCircle size={16} />}</button>
-                    <button className="icon-btn" onClick={() => removeRef(sub.reference)} title="删除"><Trash2 size={16} /></button>
+                    {/* ref 订阅由 watchlist 收藏同步,删除须在关注列表取消收藏,后台不提供删除入口(避免两侧不同步) */}
                   </div>
                 </div>
               ))}

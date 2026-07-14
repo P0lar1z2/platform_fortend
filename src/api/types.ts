@@ -125,6 +125,8 @@ export interface MarketTx {
   ref?: string;
   listingUrl?: string;
   thumbUrl?: string;
+  isExcluded?: boolean;
+  exclusionReason?: "brand_mismatch" | "match_quality" | "low_confidence" | "accessory_only" | "price_outlier" | string;
 }
 
 export interface MarketOverall {
@@ -132,6 +134,8 @@ export interface MarketOverall {
   max: number;
   min: number;
   count: number;
+  rawCount?: number;
+  excludedCount?: number;
   maxTx?: MarketTx;
   minTx?: MarketTx;
 }
@@ -165,6 +169,8 @@ export interface MarketTransactionsPage {
   page: number;
   pageSize: number;
   total: number;
+  rawTotal?: number;
+  excludedTotal?: number;
   totalPages: number;
   transactions: MarketTx[];
 }
@@ -250,6 +256,7 @@ export interface GoofishAccount {
   liveStatus?: string;   // 内存会话状态：pending / need_face / expired / error...
   unb?: string | null;
   updatedAt?: number | null;  // epoch 秒
+  ownerUserId?: string | null; // 归属网站用户(operator 视图展示;普通用户只会看到自己的号)
 }
 
 export interface GoofishStatus {
@@ -275,6 +282,7 @@ export interface GoofishSellerSubscription {
   owner_user_id?: string;
   seller_id: string;
   seller_name?: string | null;
+  seller_avatar?: string | null;
   note?: string | null;
   enabled: boolean;
   crawl_interval_minutes: number;
