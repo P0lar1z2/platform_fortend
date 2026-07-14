@@ -401,6 +401,18 @@ export default function WatchDetail() {
   const [valuationError, setValuationError] = useState<string | null>(null);
   const valuationRequestId = useRef(0);
 
+  useEffect(() => {
+    if (canAccessRestrictedData) return;
+    setMarket(null);
+    setTxPage(null);
+    setPriceRange(null);
+    setValuationResult(null);
+    setValuationError(null);
+    setValuationLoading(false);
+    setShowResults(false);
+    setPreviewTx(null);
+  }, [canAccessRestrictedData]);
+
   const numericInput = inputMode === "price" ? Number(buyPrice) : Number(targetMargin);
   const canRunValuation = canAccessRestrictedData && Number.isFinite(numericInput) && numericInput > 0;
 
