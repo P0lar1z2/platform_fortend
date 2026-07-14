@@ -19,7 +19,7 @@
 
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, X, ZoomIn } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, X, ZoomIn, LockKeyhole, Mail } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
 import AppHeader from "../components/AppHeader";
 import { LoginActionGate } from "../components/LoginGate";
@@ -39,6 +39,7 @@ const SOURCE_COLORS: Record<string, string> = Object.fromEntries(
 void DATA_SOURCE_BY_KEY;
 
 const TIME_WINDOWS: Period[] = ["1M", "3M", "6M", "1Y", "All"];
+const INVITE_EMAIL = "ravaclecb@gmail.com";
 type TxSortField = "date" | "price";
 type TxSortDir = "asc" | "desc";
 type TxSort = { field: TxSortField; dir: TxSortDir };
@@ -218,6 +219,45 @@ function ExternalListingLink({
   return <a href={getExternalListingHref(href)} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
 }
 
+function RestrictedModule({
+  locked,
+  title,
+  description,
+  children,
+}: {
+  locked: boolean;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  if (!locked) return <>{children}</>;
+
+  return (
+    <div className="access-lock-wrap" aria-label={`${title} 仅限受邀用户`}>
+      <div
+        className="access-lock-content is-locked"
+        {...({ inert: "", "aria-hidden": true } as any)}
+      >
+        {children}
+      </div>
+      <div className="access-lock-layer" role="note">
+        <aside className="access-lock-panel">
+          <div className="access-lock-icon"><LockKeyhole size={18} /></div>
+          <div className="access-lock-copy">
+            <div className="access-lock-eyebrow">受邀用户可见</div>
+            <h3>{title}</h3>
+            <p>{description}</p>
+          </div>
+          <a className="access-lock-mail" href={`mailto:${INVITE_EMAIL}?subject=Raventik%20Invite%20Request`}>
+            <Mail size={15} />
+            {INVITE_EMAIL}
+          </a>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 /* ─── MAIN ──────────────────────────────────────────────── */
 
 export default function WatchDetail() {
@@ -226,7 +266,7 @@ export default function WatchDetail() {
 
   // PDF 4.1/4.2: Section A 表款信息 + Section B 市场数据 走 API
   const ref = routeRef ?? "126610LN";
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   // 游客点"设置交易预期"时拦截引导登录。
   const [showTxGate, setShowTxGate] = useState(false);
   const catalogId = searchParams.get("catalogId") || undefined;
@@ -245,6 +285,8 @@ export default function WatchDetail() {
   const [previewTx, setPreviewTx] = useState<MarketTx | null>(null);
   const [imgIdx, setImgIdx] = useState(0);
   const txPP = 10;
+  const canAccessRestrictedData = !authLoading && Boolean(user);
+  const restrictedDataLocked = !authLoading && !user;
 
   useEffect(() => {
     let alive = true;
@@ -261,14 +303,22 @@ export default function WatchDetail() {
   useEffect(() => {
     let alive = true;
     setMarket(null);
-    setMarketLoading(true);
     setTxPg(1);
+    if (authLoading) {
+      setMarketLoading(false);
+      return () => { alive = false; };
+    }
+    if (!user) {
+      setMarketLoading(false);
+      return () => { alive = false; };
+    }
+    setMarketLoading(true);
     fetchMarket(ref, tw, catalogId)
       .then(nextMarket => { if (alive) setMarket(nextMarket); })
       .catch(() => { if (alive) setMarket(null); })
       .finally(() => { if (alive) setMarketLoading(false); });
     return () => { alive = false; };
-  }, [ref, tw, catalogId]);
+  }, [ref, tw, catalogId, authLoading, user]);
 
   // Transactions are fetched independently so page nav doesn't re-trigger
   // chart/aggregate work. period/ref change resets to page 1 above; this
@@ -276,13 +326,21 @@ export default function WatchDetail() {
   useEffect(() => {
     let alive = true;
     setTxPage(null);
+    if (authLoading) {
+      setTxLoading(false);
+      return () => { alive = false; };
+    }
+    if (!user) {
+      setTxLoading(false);
+      return () => { alive = false; };
+    }
     setTxLoading(true);
     fetchTransactions(ref, tw, txPg, txPP, txSort?.field, txSort?.dir, catalogId)
       .then(nextPage => { if (alive) setTxPage(nextPage); })
       .catch(() => { if (alive) setTxPage(null); })
       .finally(() => { if (alive) setTxLoading(false); });
     return () => { alive = false; };
-  }, [ref, tw, txPg, txSort, catalogId]);
+  }, [ref, tw, txPg, txSort, catalogId, authLoading, user]);
 
   useEffect(() => {
     setPreviewTx(null);
@@ -322,16 +380,19 @@ export default function WatchDetail() {
   const valuationRequestId = useRef(0);
 
   const numericInput = inputMode === "price" ? Number(buyPrice) : Number(targetMargin);
-  const canRunValuation = Number.isFinite(numericInput) && numericInput > 0;
+  const canRunValuation = canAccessRestrictedData && Number.isFinite(numericInput) && numericInput > 0;
 
   useEffect(() => {
     let alive = true;
     setPriceRange(null);
+    if (authLoading || !user) {
+      return () => { alive = false; };
+    }
     fetchPriceRange(ref, catalogId)
       .then(nextRange => { if (alive) setPriceRange(nextRange); })
       .catch(() => { if (alive) setPriceRange(null); });
     return () => { alive = false; };
-  }, [ref, catalogId]);
+  }, [ref, catalogId, authLoading, user]);
 
   useEffect(() => {
     valuationRequestId.current += 1;
@@ -428,6 +489,17 @@ export default function WatchDetail() {
         .bl{display:inline-flex;align-items:center;gap:4px;text-decoration:none;transition:all 0.2s ease;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,0.04)}.bl:hover{background:rgba(255,255,255,0.1);transform:translateX(2px)}
         .sl{cursor:pointer;transition:color 0.2s ease;text-decoration:none}.sl:hover{color:#fff !important;text-decoration:underline;text-underline-offset:3px}
         .cb{transition:all 0.3s cubic-bezier(0.16,1,0.3,1)}.cb:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(255,255,255,0.1)}
+        .access-lock-wrap{position:relative;border-radius:24px}
+        .access-lock-content.is-locked{filter:blur(7px);opacity:0.48;pointer-events:none;user-select:none}
+        .access-lock-layer{position:absolute;inset:0;z-index:20;display:flex;align-items:stretch;justify-content:flex-end;padding:18px;border-radius:24px;background:linear-gradient(90deg,rgba(10,10,10,0.12) 0%,rgba(10,10,10,0.44) 52%,rgba(10,10,10,0.74) 100%);pointer-events:auto}
+        .access-lock-panel{width:min(360px,100%);border-radius:20px;padding:24px;display:flex;flex-direction:column;justify-content:center;gap:14px;background:rgba(22,22,22,0.78);border:1px solid rgba(255,255,255,0.16);box-shadow:inset 0 1px 1px rgba(255,255,255,0.16),0 18px 60px rgba(0,0,0,0.36);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+        .access-lock-icon{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;background:rgba(255,255,255,0.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1)}
+        .access-lock-copy{display:flex;flex-direction:column;gap:7px}
+        .access-lock-eyebrow{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.46);font-family:${bd}}
+        .access-lock-copy h3{font-size:22px;line-height:1.18;color:#fff;font-weight:700;font-family:'Noto Serif SC',serif;margin:0}
+        .access-lock-copy p{font-size:13px;line-height:1.7;color:rgba(255,255,255,0.62);font-weight:300;font-family:${bd};margin:0}
+        .access-lock-mail{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:42px;border-radius:9999px;text-decoration:none;color:#fff;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.14);font-size:13px;font-weight:600;font-family:${bd};transition:all 0.2s ease}
+        .access-lock-mail:hover{background:rgba(255,255,255,0.16);transform:translateY(-1px)}
         @media(max-width:620px){
           .watch-identity-card{grid-template-columns:1fr!important;border-radius:16px!important}
           .watch-image-pane{border-right:none!important;border-bottom:1px solid rgba(255,255,255,0.06);padding:14px!important}
@@ -468,6 +540,13 @@ export default function WatchDetail() {
           .watch-wide-table>div{min-width:760px}
           .watch-bottom-callout{align-items:flex-start!important;flex-direction:column!important}
           .watch-bottom-callout>button{width:100%}
+          .access-lock-wrap{border-radius:18px}
+          .access-lock-layer{align-items:center;justify-content:center;padding:14px;border-radius:18px;background:rgba(10,10,10,0.58)}
+          .access-lock-panel{width:100%;padding:18px;border-radius:18px;gap:12px}
+          .access-lock-icon{width:38px;height:38px;border-radius:12px}
+          .access-lock-copy h3{font-size:20px}
+          .access-lock-copy p{font-size:12px;line-height:1.65}
+          .access-lock-content.is-locked{filter:blur(5px);opacity:0.38}
         }
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
@@ -607,6 +686,11 @@ export default function WatchDetail() {
               GET /api/watches/:ref/price-history?period={tw}
               GET /api/watches/:ref/transactions?period={tw}&page=&limit= */}
         <section style={{marginBottom:"60px"}}>
+          <RestrictedModule
+            locked={restrictedDataLocked}
+            title="价格走势与交易记录"
+            description="该模块包含真实成交价格、来源和交易明细。请发送邮件获取邀请码，登录后即可查看完整市场数据。"
+          >
           {/* Header + Global Time Window */}
           <div className="watch-market-header" style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:"24px"}}>
             <div>
@@ -768,6 +852,7 @@ export default function WatchDetail() {
               </div>)}
             </>)}
           </div>
+          </RestrictedModule>
         </section>
 
 
@@ -792,6 +877,11 @@ export default function WatchDetail() {
             Returns: { routes: [{ key, label, platforms: [{ name, revenue, fee, net, margin }], avgMargin, cost }] }
         ═══════════════════════════════════════════════════ */}
         <section id="trading-section" style={{marginBottom:"60px"}}>
+          <RestrictedModule
+            locked={restrictedDataLocked}
+            title="评估交易机会"
+            description="该模块会基于成交样本与交易路径计算利润空间。请发送邮件获取邀请码，登录后即可运行估值。"
+          >
           <div style={{marginBottom:"28px"}}>
             <div className="gp" style={{display:"inline-flex",padding:"4px 14px",fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.6)",marginBottom:"14px",letterSpacing:"1px",fontFamily:bd}}>交易估值</div>
             <h2 style={{fontFamily:"'Noto Serif SC',serif",fontSize:"32px",color:"#fff",letterSpacing:"-1px",lineHeight:1.1,fontWeight:700}}>评估交易机会</h2>
@@ -914,6 +1004,7 @@ export default function WatchDetail() {
             {/* PDF 4.3 运行估值 —— POST /api/valuations */}
             <button className="cb" disabled={valuationLoading || !canRunValuation}
               onClick={async () => {
+                if (!canAccessRestrictedData) return;
                 const requestId = ++valuationRequestId.current;
                 setShowResults(true); setExpandedRoutes({}); setValuationLoading(true); setValuationError(null);
                 try {
@@ -1130,6 +1221,7 @@ export default function WatchDetail() {
             </div>
             <WatchlistToggle entry={{ catalogId: watch?.catalogId ?? catalogId, ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }} variant="button" />
           </div>
+          </RestrictedModule>
         </section>
       </main>
 
