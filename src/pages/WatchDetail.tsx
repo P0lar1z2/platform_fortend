@@ -19,7 +19,7 @@
 
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, ChevronUp, ChevronDown, ArrowUpDown, Bookmark, Target, ExternalLink, Zap, Check, BarChart3, List, ArrowUpRight, Bell, X, ZoomIn, LockKeyhole, Mail } from "lucide-react";
 import WatchlistToggle from "../components/WatchlistToggle";
 import AppHeader from "../components/AppHeader";
 import Footer from "../components/Footer";
@@ -40,6 +40,7 @@ const SOURCE_COLORS: Record<string, string> = Object.fromEntries(
 void DATA_SOURCE_BY_KEY;
 
 const TIME_WINDOWS: Period[] = ["1M", "3M", "6M", "1Y", "All"];
+const INVITE_EMAIL = "ravaclecb@gmail.com";
 type TxSortField = "date" | "price";
 type TxSortDir = "asc" | "desc";
 type TxSort = { field: TxSortField; dir: TxSortDir };
@@ -230,6 +231,45 @@ function ExternalListingLink({
   return <a href={getExternalListingHref(href)} target="_blank" rel="noopener noreferrer" className={className} style={style}>{children}</a>;
 }
 
+function RestrictedModule({
+  locked,
+  title,
+  description,
+  children,
+}: {
+  locked: boolean;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  if (!locked) return <>{children}</>;
+
+  return (
+    <div className="access-lock-wrap" aria-label={`${title} 仅限受邀用户`}>
+      <div
+        className="access-lock-content is-locked"
+        {...({ inert: "", "aria-hidden": true } as any)}
+      >
+        {children}
+      </div>
+      <div className="access-lock-layer" role="note">
+        <aside className="access-lock-panel">
+          <div className="access-lock-icon"><LockKeyhole size={18} /></div>
+          <div className="access-lock-copy">
+            <div className="access-lock-eyebrow">受邀用户可见</div>
+            <h3>{title}</h3>
+            <p>{description}</p>
+          </div>
+          <a className="access-lock-mail" href={`mailto:${INVITE_EMAIL}?subject=Raventik%20Invite%20Request`}>
+            <Mail size={15} />
+            {INVITE_EMAIL}
+          </a>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 /* ─── MAIN ──────────────────────────────────────────────── */
 
 export default function WatchDetail() {
@@ -238,7 +278,7 @@ export default function WatchDetail() {
 
   // PDF 4.1/4.2: Section A 表款信息 + Section B 市场数据 走 API
   const ref = routeRef ?? "126610LN";
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   // 游客点"设置交易预期"时拦截引导登录。
   const [showTxGate, setShowTxGate] = useState(false);
   const catalogId = searchParams.get("catalogId") || undefined;
@@ -254,9 +294,12 @@ export default function WatchDetail() {
   const [txPage, setTxPage] = useState<MarketTransactionsPage | null>(null);
   const [txLoading, setTxLoading] = useState(false);
   const [txSort, setTxSort] = useState<TxSort | null>(null);
+  const [previewTx, setPreviewTx] = useState<MarketTx | null>(null);
   const [showExcludedTx, setShowExcludedTx] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const txPP = 10;
+  const canAccessRestrictedData = !authLoading && Boolean(user);
+  const restrictedDataLocked = !authLoading && !user;
 
   useEffect(() => {
     let alive = true;
@@ -273,14 +316,22 @@ export default function WatchDetail() {
   useEffect(() => {
     let alive = true;
     setMarket(null);
-    setMarketLoading(true);
     setTxPg(1);
+    if (authLoading) {
+      setMarketLoading(false);
+      return () => { alive = false; };
+    }
+    if (!user) {
+      setMarketLoading(false);
+      return () => { alive = false; };
+    }
+    setMarketLoading(true);
     fetchMarket(ref, tw, catalogId)
       .then(nextMarket => { if (alive) setMarket(nextMarket); })
       .catch(() => { if (alive) setMarket(null); })
       .finally(() => { if (alive) setMarketLoading(false); });
     return () => { alive = false; };
-  }, [ref, tw, catalogId]);
+  }, [ref, tw, catalogId, authLoading, user]);
 
   // Transactions are fetched independently so page nav doesn't re-trigger
   // chart/aggregate work. period/ref change resets to page 1 above; this
@@ -288,6 +339,14 @@ export default function WatchDetail() {
   useEffect(() => {
     let alive = true;
     setTxPage(null);
+    if (authLoading) {
+      setTxLoading(false);
+      return () => { alive = false; };
+    }
+    if (!user) {
+      setTxLoading(false);
+      return () => { alive = false; };
+    }
     setTxLoading(true);
     fetchTransactions(
       ref,
@@ -303,7 +362,25 @@ export default function WatchDetail() {
       .catch(() => { if (alive) setTxPage(null); })
       .finally(() => { if (alive) setTxLoading(false); });
     return () => { alive = false; };
+  }, [ref, tw, txPg, txSort, catalogId, showExcludedTx, authLoading, user]);
+
+  useEffect(() => {
+    setPreviewTx(null);
   }, [ref, tw, txPg, txSort, catalogId, showExcludedTx]);
+
+  useEffect(() => {
+    if (!previewTx) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewTx(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [previewTx]);
 
   // ── Section C: Trading Valuation ──
   const [inputMode, setInputMode] = useState("price");    // "price" = input buy price, "margin" = input target margin
@@ -324,17 +401,32 @@ export default function WatchDetail() {
   const [valuationError, setValuationError] = useState<string | null>(null);
   const valuationRequestId = useRef(0);
 
+  useEffect(() => {
+    if (canAccessRestrictedData) return;
+    setMarket(null);
+    setTxPage(null);
+    setPriceRange(null);
+    setValuationResult(null);
+    setValuationError(null);
+    setValuationLoading(false);
+    setShowResults(false);
+    setPreviewTx(null);
+  }, [canAccessRestrictedData]);
+
   const numericInput = inputMode === "price" ? Number(buyPrice) : Number(targetMargin);
-  const canRunValuation = Number.isFinite(numericInput) && numericInput > 0;
+  const canRunValuation = canAccessRestrictedData && Number.isFinite(numericInput) && numericInput > 0;
 
   useEffect(() => {
     let alive = true;
     setPriceRange(null);
+    if (authLoading || !user) {
+      return () => { alive = false; };
+    }
     fetchPriceRange(ref, catalogId)
       .then(nextRange => { if (alive) setPriceRange(nextRange); })
       .catch(() => { if (alive) setPriceRange(null); });
     return () => { alive = false; };
-  }, [ref, catalogId]);
+  }, [ref, catalogId, authLoading, user]);
 
   useEffect(() => {
     valuationRequestId.current += 1;
@@ -417,6 +509,13 @@ export default function WatchDetail() {
         .gs{background:rgba(255,255,255,0.06);background-blend-mode:luminosity;backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px);border:none;border-radius:9999px;box-shadow:4px 4px 4px rgba(0,0,0,0.05),inset 0 1px 1px rgba(255,255,255,0.2);position:relative;overflow:hidden}
         .gs::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.4px;background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(255,255,255,0.2) 20%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 60%,rgba(255,255,255,0.2) 80%,rgba(255,255,255,0.5) 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
         .tr{transition:background 0.2s ease;cursor:pointer}.tr:hover{background:rgba(255,255,255,0.04)}
+        .tx-thumb-btn{width:32px;height:32px;border-radius:6px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:zoom-in;position:relative;padding:0;transition:all 0.2s ease}
+        .tx-thumb-btn:hover{border-color:rgba(255,255,255,0.22);background:rgba(255,255,255,0.08)}
+        .tx-thumb-btn:hover .tx-thumb-zoom{opacity:1}
+        .tx-thumb-zoom{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.32);color:#fff;opacity:0;transition:opacity 0.2s ease;pointer-events:none}
+        .tx-image-lightbox{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+        .tx-image-lightbox-card{width:min(920px,calc(100vw - 32px));max-height:calc(100vh - 48px);border-radius:20px;background:rgba(24,24,24,0.94);border:1px solid rgba(255,255,255,0.14);box-shadow:0 24px 80px rgba(0,0,0,0.5);overflow:hidden;display:flex;flex-direction:column}
+        .tx-image-lightbox-img{width:100%;height:min(72vh,680px);object-fit:contain;background:radial-gradient(ellipse at center,rgba(255,255,255,0.05),rgba(255,255,255,0.015))}
         .tw{transition:all 0.2s ease;cursor:pointer;border:none;padding:5px 12px;border-radius:9px;font-size:12px;font-weight:500}.tw:hover{background:rgba(255,255,255,0.1)}
         .sr{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}.sr:last-child{border-bottom:none}
         .mb{transition:all 0.2s ease;cursor:pointer;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;border:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}.mb:hover{background:rgba(255,255,255,0.12)}
@@ -426,6 +525,17 @@ export default function WatchDetail() {
         .bl{display:inline-flex;align-items:center;gap:4px;text-decoration:none;transition:all 0.2s ease;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,0.04)}.bl:hover{background:rgba(255,255,255,0.1);transform:translateX(2px)}
         .sl{cursor:pointer;transition:color 0.2s ease;text-decoration:none}.sl:hover{color:#fff !important;text-decoration:underline;text-underline-offset:3px}
         .cb{transition:all 0.3s cubic-bezier(0.16,1,0.3,1)}.cb:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(255,255,255,0.1)}
+        .access-lock-wrap{position:relative;border-radius:24px}
+        .access-lock-content.is-locked{filter:blur(7px);opacity:0.48;pointer-events:none;user-select:none}
+        .access-lock-layer{position:absolute;inset:0;z-index:20;display:flex;align-items:stretch;justify-content:flex-end;padding:18px;border-radius:24px;background:linear-gradient(90deg,rgba(10,10,10,0.12) 0%,rgba(10,10,10,0.44) 52%,rgba(10,10,10,0.74) 100%);pointer-events:auto}
+        .access-lock-panel{width:min(360px,100%);border-radius:20px;padding:24px;display:flex;flex-direction:column;justify-content:center;gap:14px;background:rgba(22,22,22,0.78);border:1px solid rgba(255,255,255,0.16);box-shadow:inset 0 1px 1px rgba(255,255,255,0.16),0 18px 60px rgba(0,0,0,0.36);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+        .access-lock-icon{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;background:rgba(255,255,255,0.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.1)}
+        .access-lock-copy{display:flex;flex-direction:column;gap:7px}
+        .access-lock-eyebrow{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.46);font-family:${bd}}
+        .access-lock-copy h3{font-size:22px;line-height:1.18;color:#fff;font-weight:700;font-family:'Noto Serif SC',serif;margin:0}
+        .access-lock-copy p{font-size:13px;line-height:1.7;color:rgba(255,255,255,0.62);font-weight:300;font-family:${bd};margin:0}
+        .access-lock-mail{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:42px;border-radius:9999px;text-decoration:none;color:#fff;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.14);font-size:13px;font-weight:600;font-family:${bd};transition:all 0.2s ease}
+        .access-lock-mail:hover{background:rgba(255,255,255,0.16);transform:translateY(-1px)}
         @media(max-width:620px){
           .watch-identity-card{grid-template-columns:1fr!important;border-radius:16px!important}
           .watch-image-pane{border-right:none!important;border-bottom:1px solid rgba(255,255,255,0.06);padding:14px!important}
@@ -458,16 +568,65 @@ export default function WatchDetail() {
           .watch-tx-row>:nth-child(4){grid-column:3;grid-row:1;font-size:14px!important}
           .watch-tx-row>:nth-child(n+5):nth-child(-n+9){display:none!important}
           .watch-tx-row>:nth-child(10){grid-column:3;grid-row:2}
+          .tx-image-lightbox{padding:14px}
+          .tx-image-lightbox-card{width:100%;max-height:calc(100vh - 28px);border-radius:16px}
+          .tx-image-lightbox-img{height:62vh}
           .valuation-conditions-grid,.valuation-summary-grid{grid-template-columns:1fr!important}
           .watch-wide-table{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
           .watch-wide-table>div{min-width:760px}
           .watch-bottom-callout{align-items:flex-start!important;flex-direction:column!important}
           .watch-bottom-callout>button{width:100%}
+          .access-lock-wrap{border-radius:18px}
+          .access-lock-layer{align-items:center;justify-content:center;padding:14px;border-radius:18px;background:rgba(10,10,10,0.58)}
+          .access-lock-panel{width:100%;padding:18px;border-radius:18px;gap:12px}
+          .access-lock-icon{width:38px;height:38px;border-radius:12px}
+          .access-lock-copy h3{font-size:20px}
+          .access-lock-copy p{font-size:12px;line-height:1.65}
+          .access-lock-content.is-locked{filter:blur(5px);opacity:0.38}
         }
         ::selection{background:rgba(255,255,255,0.2);color:#fff}
       `}</style>
 
       <AppHeader />
+
+      {previewTx?.thumbUrl && (
+        <div
+          className="tx-image-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="交易图片预览"
+          onClick={() => setPreviewTx(null)}
+        >
+          <div className="tx-image-lightbox-card" onClick={event => event.stopPropagation()}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"16px",padding:"14px 16px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  {previewTx.sourceName || previewTx.source || "交易记录"}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"10px",marginTop:"4px",fontSize:"11px",fontWeight:400,color:"rgba(255,255,255,0.45)",fontFamily:bd,whiteSpace:"nowrap"}}>
+                  <span>{previewTx.date || previewTx.dateTime || "日期未知"}</span>
+                  <span>¥{(previewTx.price ?? 0).toLocaleString()}</span>
+                  <span>{previewTx.ref || ref}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="关闭图片预览"
+                onClick={() => setPreviewTx(null)}
+                style={{width:"36px",height:"36px",borderRadius:"10px",border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.78)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <img
+              className="tx-image-lightbox-img"
+              src={previewTx.thumbUrl}
+              alt={`${previewTx.sourceName || previewTx.source || "交易记录"} ${previewTx.date || ""}`}
+              onError={() => setPreviewTx(null)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Ambient */}
       <div style={{position:"fixed",top:0,left:"10%",width:"600px",height:"500px",background:"radial-gradient(ellipse,rgba(80,120,200,0.06) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>
@@ -563,6 +722,11 @@ export default function WatchDetail() {
               GET /api/watches/:ref/price-history?period={tw}
               GET /api/watches/:ref/transactions?period={tw}&page=&limit= */}
         <section style={{marginBottom:"60px"}}>
+          <RestrictedModule
+            locked={restrictedDataLocked}
+            title="价格走势与交易记录"
+            description="该模块包含真实成交价格、来源和交易明细。请发送邮件获取邀请码，登录后即可查看完整市场数据。"
+          >
           {/* Header + Global Time Window */}
           <div className="watch-market-header" style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:"24px"}}>
             <div>
@@ -707,11 +871,25 @@ export default function WatchDetail() {
                 <div key={tx.id} className="tr watch-tx-row" style={{display:"grid",gridTemplateColumns:"36px 90px 120px 110px 50px 80px 55px 65px 90px 1fr",padding:"12px 24px",gap:"8px",borderBottom:i<txPD.length-1?"1px solid rgba(255,255,255,0.04)":"none",alignItems:"center",background:tx.isExcluded?"rgba(245,158,11,0.035)":undefined}}>
 
                   {/* Thumbnail — tx.thumbUrl (mongo product_image_url) */}
-                  <div style={{width:"32px",height:"32px",borderRadius:"6px",overflow:"hidden",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <button
+                    type="button"
+                    className="tx-thumb-btn"
+                    disabled={!tx.thumbUrl}
+                    aria-label={tx.thumbUrl ? "放大查看交易图片" : "无交易图片"}
+                    title={tx.thumbUrl ? "点击放大图片" : "无图片"}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (tx.thumbUrl) setPreviewTx(tx);
+                    }}
+                    style={{cursor:tx.thumbUrl ? "zoom-in" : "default"}}
+                  >
                     {tx.thumbUrl
-                      ? <img src={tx.thumbUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+                      ? <>
+                          <img src={tx.thumbUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+                          <span className="tx-thumb-zoom"><ZoomIn size={14} /></span>
+                        </>
                       : <span style={{fontSize:"9px",color:"rgba(255,255,255,0.2)",fontFamily:bd}}>—</span>}
-                  </div>
+                  </button>
                   {/* Source badge — colored per source */}
                   <div style={{display:"flex",alignItems:"center",gap:"5px",flexWrap:"wrap"}}>
                     <span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:"6px",fontSize:"11px",fontWeight:500,background:`${SOURCE_COLORS[tx.source]}18`,color:SOURCE_COLORS[tx.source]||"#888",fontFamily:bd,width:"fit-content"}}>{tx.sourceName}</span>
@@ -750,6 +928,7 @@ export default function WatchDetail() {
               </div>)}
             </>)}
           </div>
+          </RestrictedModule>
         </section>
 
 
@@ -774,6 +953,11 @@ export default function WatchDetail() {
             Returns: { routes: [{ key, label, platforms: [{ name, revenue, fee, net, margin }], avgMargin, cost }] }
         ═══════════════════════════════════════════════════ */}
         <section id="trading-section" style={{marginBottom:"60px"}}>
+          <RestrictedModule
+            locked={restrictedDataLocked}
+            title="评估交易机会"
+            description="该模块会基于成交样本与交易路径计算利润空间。请发送邮件获取邀请码，登录后即可运行估值。"
+          >
           <div style={{marginBottom:"28px"}}>
             <div className="gp" style={{display:"inline-flex",padding:"4px 14px",fontSize:"11px",fontWeight:500,color:"rgba(255,255,255,0.6)",marginBottom:"14px",letterSpacing:"1px",fontFamily:bd}}>交易估值</div>
             <h2 style={{fontFamily:"'Noto Serif SC',serif",fontSize:"32px",color:"#fff",letterSpacing:"-1px",lineHeight:1.1,fontWeight:700}}>评估交易机会</h2>
@@ -896,6 +1080,7 @@ export default function WatchDetail() {
             {/* PDF 4.3 运行估值 —— POST /api/valuations */}
             <button className="cb" disabled={valuationLoading || !canRunValuation}
               onClick={async () => {
+                if (!canAccessRestrictedData) return;
                 const requestId = ++valuationRequestId.current;
                 setShowResults(true); setExpandedRoutes({}); setValuationLoading(true); setValuationError(null);
                 try {
@@ -1112,6 +1297,7 @@ export default function WatchDetail() {
             </div>
             <WatchlistToggle entry={{ catalogId: watch?.catalogId ?? catalogId, ref: watch?.ref ?? ref, brand: watch?.brand, name: watch?.name }} variant="button" />
           </div>
+          </RestrictedModule>
         </section>
       </main>
 
