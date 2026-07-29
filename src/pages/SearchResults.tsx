@@ -15,6 +15,7 @@ import { listBrands } from "../api/brands";
 import { buildPageList } from "../utils/pagination";
 import { getWatchHref } from "../lib/watchRoutes";
 import type { WatchListItem } from "../api/types";
+import WatchImage from "../components/WatchImage";
 
 // ─── MOCK DATA (24 watches) ─────────────────────────────
 const WATCHES = [
@@ -46,37 +47,6 @@ const WATCHES = [
 
 const PER_PAGE = 12;
 const FALLBACK_BRAND_NAMES = ["Rolex", "Omega", "Patek Philippe", "Audemars Piguet", "Cartier", "IWC", "Tudor", "Grand Seiko"];
-
-// ─── PLACEHOLDER IMAGE ──────────────────────────────────
-function WatchPlaceholder({ size = 120 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="120" height="120" fill="rgba(255,255,255,0.03)" />
-      <circle cx="60" cy="56" r="32" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" fill="none" />
-      <circle cx="60" cy="56" r="26" stroke="rgba(255,255,255,0.08)" strokeWidth="1" fill="none" />
-      <line x1="60" y1="56" x2="60" y2="38" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="60" y1="56" x2="72" y2="56" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="60" cy="56" r="2" fill="rgba(255,255,255,0.2)" />
-      <rect x="56" y="24" width="8" height="6" rx="1" fill="rgba(255,255,255,0.08)" />
-      <rect x="55" y="88" width="10" height="14" rx="2" fill="rgba(255,255,255,0.06)" />
-      <rect x="55" y="18" width="10" height="8" rx="2" fill="rgba(255,255,255,0.06)" />
-      <text x="60" y="108" textAnchor="middle" fill="rgba(255,255,255,0.15)" fontSize="7" fontFamily="Barlow, sans-serif">NO IMAGE</text>
-    </svg>
-  );
-}
-
-// ─── WATCH IMAGE ─────────────────────────────────────────
-function WatchImage({ src, alt, size = 120, className = "" }) {
-  const [err, setErr] = useState(false);
-  if (err || !src) return <WatchPlaceholder size={size} />;
-  return (
-    <img
-      src={src} alt={alt}
-      onError={() => setErr(true)}
-      style={{ width: size, height: size, objectFit: "contain", display: "block" }}
-    />
-  );
-}
 
 // ─── MAIN ────────────────────────────────────────────────
 export default function SearchResults() {

@@ -29,6 +29,7 @@ import { getBrand } from "../api/brands";
 import type { BrandDetail, WatchListItem } from "../api/types";
 import { buildPageList } from "../utils/pagination";
 import { getWatchHref } from "../lib/watchRoutes";
+import WatchImage from "../components/WatchImage";
 
 // ─── MOCK DATA ───────────────────────────────────────────
 const BRAND = {
@@ -56,29 +57,6 @@ const WATCHES = [
 ];
 
 const PER_PAGE = 12;
-
-// ─── PLACEHOLDER ─────────────────────────────────────────
-function WatchPlaceholder({ size = 120 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
-      <rect width="120" height="120" fill="rgba(255,255,255,0.03)" />
-      <circle cx="60" cy="56" r="32" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" fill="none" />
-      <circle cx="60" cy="56" r="26" stroke="rgba(255,255,255,0.08)" strokeWidth="1" fill="none" />
-      <line x1="60" y1="56" x2="60" y2="38" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="60" y1="56" x2="72" y2="56" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="60" cy="56" r="2" fill="rgba(255,255,255,0.2)" />
-    </svg>
-  );
-}
-
-function WatchImage({ src, alt, size = 120 }: { src?: string | null; alt?: string; size?: number }) {
-  const [err, setErr] = useState(false);
-  if (err || !src) return <WatchPlaceholder size={size} />;
-  return (
-    <img src={src} alt={alt} onError={() => setErr(true)}
-         style={{ width: size, height: size, objectFit: "contain", display: "block" }} />
-  );
-}
 
 // ─── MAIN ────────────────────────────────────────────────
 export default function BrandModels() {

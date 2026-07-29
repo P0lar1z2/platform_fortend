@@ -31,6 +31,7 @@ import { getExternalListingHref } from "../lib/externalListings";
 import { fetchPriceRange, postValuation } from "../api/valuations";
 import { fetchWatch, fetchMarket, fetchTransactions } from "../api/watches";
 import type { ValuationResponse, WatchInfo, MarketResponse, MarketTransactionsPage, MarketTx, Period } from "../api/types";
+import { proxied } from "../lib/imageUrl";
 
 // 数据源集中配置在 lib/constants.ts，新增源只改那里
 const DATA_SOURCES = SHARED_DATA_SOURCES;
@@ -620,7 +621,7 @@ export default function WatchDetail() {
             </div>
             <img
               className="tx-image-lightbox-img"
-              src={previewTx.thumbUrl}
+              src={proxied(previewTx.thumbUrl)}
               alt={`${previewTx.sourceName || previewTx.source || "交易记录"} ${previewTx.date || ""}`}
               onError={() => setPreviewTx(null)}
             />
@@ -647,7 +648,7 @@ export default function WatchDetail() {
               <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",maxHeight:"360px",marginBottom:"12px"}}>
                 {watch && watch.images && watch.images.length > 0 ? (
                   <img
-                    src={watch.images[Math.min(imgIdx, watch.images.length-1)]}
+                    src={proxied(watch.images[Math.min(imgIdx, watch.images.length-1)])}
                     alt={watch.name || watch.ref}
                     style={{maxWidth:"100%",maxHeight:"360px",objectFit:"contain",borderRadius:"8px"}}
                     onError={(e)=>{(e.target as HTMLImageElement).style.display="none"}}
@@ -660,7 +661,7 @@ export default function WatchDetail() {
               <div style={{display:"flex",gap:"6px",justifyContent:"center"}}>
                 {(watch?.images ?? []).slice(0,4).map((src,i)=>(
                   <div key={i} onClick={()=>setImgIdx(i)} style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:i===imgIdx?"1px solid rgba(255,255,255,0.3)":"1px solid rgba(255,255,255,0.06)",overflow:"hidden",cursor:"pointer",transition:"all 0.2s ease"}}>
-                    <img src={src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none"}}/>
+                    <img src={proxied(src)} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={(e)=>{(e.target as HTMLImageElement).style.display="none"}}/>
                   </div>
                 ))}
                 {(watch?.images ?? []).length === 0 && [0,1,2,3].map(i=>(<div key={i} style={{width:"52px",height:"52px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)"}}/>))}
@@ -885,7 +886,7 @@ export default function WatchDetail() {
                   >
                     {tx.thumbUrl
                       ? <>
-                          <img src={tx.thumbUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+                          <img src={proxied(tx.thumbUrl)} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>
                           <span className="tx-thumb-zoom"><ZoomIn size={14} /></span>
                         </>
                       : <span style={{fontSize:"9px",color:"rgba(255,255,255,0.2)",fontFamily:bd}}>—</span>}

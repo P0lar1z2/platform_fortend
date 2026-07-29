@@ -32,21 +32,9 @@ import { WATCHLIST_CAPACITY, WATCHLIST_WARN_THRESHOLD } from "../lib/constants";
 import { buildPageList } from "../utils/pagination";
 import { getWatchHref } from "../lib/watchRoutes";
 import { getWatchIdentity } from "../lib/watchIdentity";
+import WatchImage from "../components/WatchImage";
 
 const PER_PAGE = 12;
-
-function WatchPlaceholder({ size = 120 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
-      <rect width="120" height="120" fill="rgba(255,255,255,0.03)" />
-      <circle cx="60" cy="56" r="32" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" fill="none" />
-      <circle cx="60" cy="56" r="26" stroke="rgba(255,255,255,0.08)" strokeWidth="1" fill="none" />
-      <line x1="60" y1="56" x2="60" y2="38" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="60" y1="56" x2="72" y2="56" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="60" cy="56" r="2" fill="rgba(255,255,255,0.2)" />
-    </svg>
-  );
-}
 
 export default function Watchlist() {
   const navigate = useNavigate();
@@ -225,7 +213,7 @@ export default function Watchlist() {
                    className={`gc watch-card mobile-card ${removingIdentity===getWatchIdentity(w.ref, w.catalogId)?"removing":""}`}
                    style={{padding:0,display:"flex",flexDirection:"column"}}>
                 <div className="mobile-card-image" style={{width:"100%",aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflow:"hidden"}}>
-                  {w.thumbUrl ? <img src={w.thumbUrl} alt={w.name||w.ref} style={{width:160,height:160,objectFit:"contain"}}/> : <WatchPlaceholder size={160}/>}
+                  <WatchImage src={w.thumbUrl} alt={w.name||w.ref} size={160}/>
                 </div>
                 <div className="mobile-card-body" style={{padding:"16px 18px 18px",flex:1,display:"flex",flexDirection:"column"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"6px"}}>
@@ -283,7 +271,7 @@ export default function Watchlist() {
                      alignItems:"center",transition:"all 0.3s ease",
                    }}>
                 <div className="mobile-list-thumb" style={{width:"42px",height:"42px",borderRadius:"8px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
-                  {w.thumbUrl ? <img src={w.thumbUrl} alt="" style={{width:36,height:36,objectFit:"contain"}}/> : <WatchPlaceholder size={36}/>}
+                  <WatchImage src={w.thumbUrl} alt="" size={36}/>
                 </div>
                 <div className="mobile-list-main" style={{display:"flex",alignItems:"center",gap:"8px",overflow:"hidden",minWidth:0}}>
                   <span style={{fontSize:"13px",fontWeight:600,color:"#fff",fontFamily:bd,letterSpacing:"0.3px",whiteSpace:"nowrap",flexShrink:0}}>{w.ref}</span>

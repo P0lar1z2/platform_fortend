@@ -7,6 +7,7 @@ import { useToast } from "../components/Toast";
 import { useAuth } from "../hooks/useAuth";
 import { LoginPageGate } from "../components/LoginGate";
 import AppHeader from "../components/AppHeader";
+import { proxied } from "../lib/imageUrl";
 import {
   createLarkBindCode,
   deleteAccount,
@@ -618,7 +619,7 @@ export default function GoofishSubscriptions() {
                 <div className="row" key={sub.seller_id}>
                   <div className="gf-seller">
                     {sub.seller_avatar
-                      ? <img className="gf-avatar" src={sub.seller_avatar} alt="" referrerPolicy="no-referrer" />
+                      ? <img className="gf-avatar" src={proxied(sub.seller_avatar)} alt="" />
                       : <span className="gf-avatar gf-avatar-fallback">{(sub.seller_name || sub.seller_id).slice(0, 1)}</span>}
                     <div><div>{sub.seller_name || sub.seller_id}</div><div className="muted">{sub.seller_id}</div></div>
                   </div>
@@ -668,7 +669,7 @@ export default function GoofishSubscriptions() {
           <div className="rows">
             {items.length === 0 ? <div className="item-row muted">暂无商品</div> : items.slice(0, 20).map(item => (
               <div className="item-row" key={item.item_id}>
-                {item.images?.[0] ? <img className="thumb" src={item.images[0]} alt="" /> : <div className="thumb" />}
+                {item.images?.[0] ? <img className="thumb" src={proxied(item.images[0])} alt="" /> : <div className="thumb" />}
                 <div className="item-main"><a className="link" href={item.source_url} target="_blank" rel="noreferrer">{item.title}</a><div className="muted">item {item.item_id}</div></div>
                 <div>{item.raw_price || (item.price_cny ? `${item.price_cny}` : "-")}</div>
                 <div className="muted">{fmt(item.first_seen_at)}</div>
